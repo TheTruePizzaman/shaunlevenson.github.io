@@ -26,14 +26,14 @@ Master of Science in Quantitative Economics
 **California State University, Northridge \| 2021 - 2023**<br>
 Bachelor of Arts in Economics
 - Overall GPA: 3.6
-_____________________________________________________________
+
 ## Certificates and Awards
 **International Institute of Forecasters \| 2025**<br>
 Certified Forecaster Designation (California Lutheran University)
 
-**Overton Prize \| 2025**
+**Overton Prize \| 2025**<br>
 For Exemplary Research in Economic Forecasting (California Lutheran University)
-_______________________________________________________________
+
 ## Skillset Overview
 R Programming, EVIews, Microsoft Office, Machine Learning, Time Series Analysis, Forecasting, Multi-Equation Modeling, Model Development, Panel Regression, Deep Learning, Code Development, Automation
 
