@@ -7,7 +7,7 @@
 **LinkedIn:** www.linkedin.com/in/shaun-levenson
 
 ## Professional Experience
-**Graduate Assitant (Automated Systems Technician) \| Nov. 2024 - Aug. 2025**
+**Graduate Assitant (Automated Systems Technician) \| Nov. 2024 - Aug. 2025**<br>
 CLU Center for Economic Research and Forecasting
 - Built and maintained dynamic data baskets in Excel for use in forecasting models and economic analysis.
 - Formatted and refined visualizations in PowerPoint for publication as part of the Latino GDP Project, ensuring consistency and clarity in professional economic reports.
@@ -16,9 +16,15 @@ CLU Center for Economic Research and Forecasting
 - Supported faculty-led economic forecasting by preparing datasets, generating charts, and improving data workflows for more efficient, accurate output.
 
 ## Education
-**California Lutheran University \| 2024-2025
+**California Lutheran University \| 2024-2025**<br>
 Master of Science in Quantitative Economics
 - Overall GPA: 3.72  | Concluding GPA: 4.0
 - Developed and implemented econometric models in EViews and R to forecast technology sector GDP, applying structural and time-series methods, error analysis, and combination forecasting to evaluate forecast performance and enhance forecast accuracy.
 - Conducted macroeconomic analysis by evaluating current data, policy developments, and structural trends to form professional assessments of economic conditions and outlook.
 - Analyzed state and national environmental policies, assessing effectiveness and equity outcomes, and provided evidence-based recommendations for policy improvements.
+
+**California State University, Northridge | 2021 - 2023**<br>
+Bachelor of Arts in Economics
+- Overall GPA: 3.6
+_____________________________________________________________
+## Certificates and Awards
