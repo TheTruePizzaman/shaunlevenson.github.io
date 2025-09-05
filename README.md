@@ -50,3 +50,7 @@ R Programming, EVIews, Microsoft Office, Machine Learning, Time Series Analysis,
 
 **Policy Analysis**
 - Macroeconomic Policy • Environmental Policy Evaluation • Scenario Design • Literature Review • Evidence-Based Recommendations • Policy Impact Assessment
+
+## Project Details
+
+
