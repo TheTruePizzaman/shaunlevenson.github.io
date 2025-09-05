@@ -7,7 +7,7 @@
 **LinkedIn:** www.linkedin.com/in/shaun-levenson
 
 ## Professional Experience
-**Graduate Assitant (Automated Systems Technician) '|' Nov. 2024 - Aug. 2025**
+**Graduate Assitant (Automated Systems Technician) \| Nov. 2024 - Aug. 2025**
 CLU Center for Economic Research and Forecasting
 - Built and maintained dynamic data baskets in Excel for use in forecasting models and economic analysis.
 - Formatted and refined visualizations in PowerPoint for publication as part of the Latino GDP Project, ensuring consistency and clarity in professional economic reports.
