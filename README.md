@@ -7,5 +7,5 @@
 **LinkedIn:** www.linkedin.com/in/shaun-levenson
 
 ## Professional Experience
-- Graduate Assitant (Automated Systems Technician) "|" Nov. 2024 - Aug. 2025
+- Graduate Assitant (Automated Systems Technician) - Nov. 2024 - Aug. 2025
  - CLU Center for Economic Research and Forecasting
