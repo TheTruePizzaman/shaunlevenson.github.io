@@ -18,13 +18,35 @@ CLU Center for Economic Research and Forecasting
 ## Education
 **California Lutheran University \| 2024-2025**<br>
 Master of Science in Quantitative Economics
-- Overall GPA: 3.72  | Concluding GPA: 4.0
+- Overall GPA: 3.72  \| Concluding GPA: 4.0
 - Developed and implemented econometric models in EViews and R to forecast technology sector GDP, applying structural and time-series methods, error analysis, and combination forecasting to evaluate forecast performance and enhance forecast accuracy.
 - Conducted macroeconomic analysis by evaluating current data, policy developments, and structural trends to form professional assessments of economic conditions and outlook.
 - Analyzed state and national environmental policies, assessing effectiveness and equity outcomes, and provided evidence-based recommendations for policy improvements.
 
-**California State University, Northridge | 2021 - 2023**<br>
+**California State University, Northridge \| 2021 - 2023**<br>
 Bachelor of Arts in Economics
 - Overall GPA: 3.6
 _____________________________________________________________
 ## Certificates and Awards
+**International Institute of Forecasters \| 2025**<br>
+Certified Forecaster Designation (California Lutheran University)
+
+**Overton Prize \| 2025**
+For Exemplary Research in Economic Forecasting (California Lutheran University)
+_______________________________________________________________
+## Skillset Overview
+R Programming, EVIews, Microsoft Office, Machine Learning, Time Series Analysis, Forecasting, Multi-Equation Modeling, Model Development, Panel Regression, Deep Learning, Code Development, Automation
+
+## Detailed Skillset
+**Software and Programming**
+- R • EViews • Census API • Microsoft Office • Code Development •  Automation
+
+**Econometrics**
+- *General Skills*:  Cross-Section Regression • Panel Regression • Time Series Analysis • Trend Analysis • Unit-Root Testing • Error Diagnostics (RMSE, MAPE) • Time Series Data Extraction • Scenario Forecasting • Combination Forecasting (Equal Weighting & Optimal Weighting) • Multi-Equation Modeling
+- *Techniques*: Cobb-Douglas & Translog Estimation • FMOLS • ARIMA • VAR • Bayesian VAR • GARCH • Difference in Differences • Probit • Logit • Linear Probability • 2SLS • Interventions
+
+**Data Analytics**
+- Data Cleaning • Data Integration • Workflow Automation • Visualization • Supervised Learning (Regression, Classification, XGBoost, Random Forests, SVM, Logistic Regression, Lasso/Ridge/Elastic Net) • Unsupervised Learning (Clustering, PCA, Dimensionality Reduction) • Neural Networks • Model Validation & Cross-Validation • Hyperparameter Tuning
+
+**Policy Analysis**
+- Macroeconomic Policy • Environmental Policy Evaluation • Scenario Design • Literature Review • Evidence-Based Recommendations • Policy Impact Assessment
