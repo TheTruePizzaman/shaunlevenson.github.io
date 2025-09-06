@@ -53,7 +53,7 @@ For Exemplary Research in Economic Forecasting (California Lutheran University)
 This [project](https://github.com/shaunLevenson/shaunlevenson.github.io/tree/main/projects/Capstone) models and forecasts the U.S. technology industry's production function and future GDP using econometric techniques, scenario analysis, and combination forecasting, integrating theory, data, and multiple predictive approaches to understand tech's impact on economic growth.
 
 **Policy Brief - California Environmental Policy**
-This [project](projects/Environmental/) compares California’s main climate policy instruments—Renewable Portfolio Standard (RPS), Low Carbon Fuel Standard (LCFS), and Cap-and-Trade—using criteria of unit effectiveness, cost, efficiency, and equity, providing policy recommendations for fairer, more effective emissions reductions.
+This [project](https://github.com/shaunLevenson/shaunlevenson.github.io/tree/main/projects/Environmental) compares California’s main climate policy instruments—Renewable Portfolio Standard (RPS), Low Carbon Fuel Standard (LCFS), and Cap-and-Trade—using criteria of unit effectiveness, cost, efficiency, and equity, providing policy recommendations for fairer, more effective emissions reductions.
 
 **Policy Brief - Federal Funds Rate Target Assessment**
 This [project](projects/Macro-2/) evaluates whether the current U.S. Federal Funds Target Rate is appropriately set in 2025, drawing on economic data, theory, and expert opinion to argue for maintaining a steady rate amid inflation and growth uncertainties.
