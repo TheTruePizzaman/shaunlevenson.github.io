@@ -1,0 +1,831 @@
+'-----------------------------------------------------------'
+'s.levenson            Capstone            8.17.2025		'
+'-----------------------------------------------------------'
+
+CD F:\ECON\Capstone\Capstone_Workfile
+
+WORKFILE Capstone.WF1 A 1925 2029
+
+READ(B8,S=Annual) Capstone_main.XLS GDP_Tech Log_GDP_Tech REC1 REC2 RnD_NonRes RnD_N RnD$ K K$ K_IP K_IP$ K_Info K_Info$ K_IndEq K_IndEq$ K_Tech K_Tech$ Pk Pk$ L_INFO L_CEP L_SEMI L_ELEC P_Oil P_Semi P_E_C P_Cop_Prod P_Cop_Brass P_B_T_C Hk BAPerc_Pop BAPerc_Pop_S GDP_Info GDP_CEP GDP GDP_Gov GDP_PrivNT GDP$ log_GDP$ GDP_Info$ GDP_CEP$ GDP_Tech$ Log_GDP_Tech$ GDP_PrivNT$ GDP_Gov$ I_P_GDP I_P_Info I_P_CEP I_P_Tech I_P_PrivNT I_P_Gov MFP PatGrant
+ 
+ '-------------------------------------------------------'
+ '					DESCRIPTIVE STATS					 '
+ '-------------------------------------------------------'
+SERIES D_GDP_TECH$ = D(GDP_Tech$)
+'FREEZE D_GDP_TECH$.LINE
+'FREEZE D_GDP_TECH$.HISTOGRAM
+
+SERIES D_LOG_GDP_TECH$ = D(LOG(GDP_Tech$))
+'FREEZE D_LOG_GDP_TECH$.LINE
+'FREEZE D_LOG_GDP_TECH$.HISTOGRAM
+
+SERIES GR_TECH$ = @PC(GDP_TECH$)
+'FREEZE GR_TECH$.LINE
+'FREEZE GR_TECH$.HISTOGRAM
+
+SERIES DD_GDP_TECH$ = D(D(GDP_TECH$))
+'FREEZE DD_GDP_TECH$.LINE
+'FREEZE DD_GDP_TECH$.HISTOGRAM
+
+ '-------------------------------------------------------'
+ '					STOCHASTIC PROPERTIES				 '
+ '-------------------------------------------------------'
+GDP_TECH$.IDENT(15)
+FREEZE(GDP_TECH$_ADF)			GDP_TECH$.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=15)
+FREEZE(GDP_TECH$_DFGLS) 		GDP_TECH$.UROOT(DFGLS,C,DIF=0,LAGMETHOD=SIC,MAXLAG=15)
+FREEZE(GDP_TECH$_KPSS)			GDP_TECH$.UROOT(KPSS,C,HAC=QS,BAND=12)
+
+D_GDP_TECH$.IDENT(15)
+FREEZE(D_GDP_TECH$_ADF)			D_GDP_TECH$.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=15)
+FREEZE(D_GDP_TECH$_DFGLS)		D_GDP_TECH$.UROOT(DFGLS,C,DIF=0,LAGMETHOD=SIC,MAXLAG=15)
+FREEZE(D_GDP_TECH$_KPSS)		D_GDP_TECH$.UROOT(KPSS,C,HAC=QS,BAND=12)
+
+D_LOG_GDP_TECH$.IDENT(15)
+FREEZE(D_LOG_GDP_TECH$_ADF)		D_LOG_GDP_TECH$.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=15)
+FREEZE(D_LOG_GDP_TECH$_DFGLS) 	D_LOG_GDP_TECH$.UROOT(DFGLS,C,DIF=0,LAGMETHOD=SIC,MAXLAG=15)
+FREEZE(D_LOG_GDP_TECH$_KPSS)	D_LOG_GDP_TECH$.UROOT(KPSS,C,HAC=QS,BAND=12)
+
+GR_TECH$.IDENT(15)
+FREEZE(GR_TECH$_ADF)			GR_TECH$.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=15)
+FREEZE(GR_TECH$_DFGLS) 			GR_TECH$.UROOT(DFGLS,C,DIF=0,LAGMETHOD=SIC,MAXLAG=15)
+FREEZE(GR_TECH$_KPSS)			GR_TECH$.UROOT(KPSS,C,HAC=QS,BAND=12)
+
+DD_GDP_TECH$.IDENT(15)
+FREEZE(DD_GDP_TECH$_ADF)		DD_GDP_TECH$.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=15)
+FREEZE(DD_GDP_TECH$_DFGLS) 		DD_GDP_TECH$.UROOT(DFGLS,C,DIF=0,LAGMETHOD=SIC,MAXLAG=15)
+FREEZE(DD_GDP_TECH$_KPSS)		DD_GDP_TECH$.UROOT(KPSS,C,HAC=QS,BAND=12)
+	
+ '-------------------------------------------------------'
+ '					Shock Size							 '
+ '-------------------------------------------------------'
+
+EQUATION RSSM1_EQ.LS(COV=HAC, COVLAG=A, COVINFO=SIC, COVKERN=QUADSPEC, COVBW=ANDREWS) D(LOG(GDP_TECH$)) C 
+
+	RSSM1_EQ.MAKERESIDS RSSM1_RESIDS
+	SCALAR RSSM1_SD = @STDEV(RSSM1_RESIDS)
+	SERIES RSSM1=RSSM1_RESIDS/RSSM1_SD
+	GROUP RSSM1_RESIDS_2 RSSM1_RESIDS RSSM1
+	
+	FREEZE(RSSM1_ADF)		RSSM1.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=18)
+	FREEZE(RSSM1_DFGLS)		RSSM1.UROOT(DFGLS,C,DIF=0,LAGMETHOD=SIC,MAXLAG=15)
+	FREEZE(RSSM1_KPSS)		RSSM1.UROOT(KPSS,C,HAC=QS,BAND=12)
+EQUATION RSSM2_EQ.LS(COV=HAC, COVLAG=A, COVINFO=SIC, COVKERN=QUADSPEC, COVBW=ANDREWS) D(LOG(GDP_CEP$)) C 
+
+	RSSM2_EQ.MAKERESIDS RSSM2_RESIDS
+	SCALAR RSSM2_SD = @STDEV(RSSM2_RESIDS)
+	SERIES RSSM2=RSSM2_RESIDS/RSSM2_SD
+	GROUP RSSM2_RESIDS_2 RSSM2_RESIDS RSSM2
+	
+	FREEZE(RSSM2_ADF)		RSSM2.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=18)
+	FREEZE(RSSM2_DFGLS)		RSSM2.UROOT(DFGLS,C,DIF=0,LAGMETHOD=SIC,MAXLAG=15)
+	FREEZE(RSSM2_KPSS)		RSSM2.UROOT(KPSS,C,HAC=QS,BAND=12)	
+EQUATION RSSM3_EQ.LS(COV=HAC, COVLAG=A, COVINFO=SIC, COVKERN=QUADSPEC, COVBW=ANDREWS) D(LOG(GDP_INFO$)) C 
+
+	RSSM3_EQ.MAKERESIDS RSSM3_RESIDS
+	SCALAR RSSM3_SD = @STDEV(RSSM3_RESIDS)
+	SERIES RSSM3=RSSM3_RESIDS/RSSM3_SD
+	GROUP RSSM3_RESIDS_2 RSSM3_RESIDS RSSM3
+	
+	FREEZE(RSSM3_ADF)		RSSM3.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=18)
+	FREEZE(RSSM3_DFGLS)		RSSM3.UROOT(DFGLS,C,DIF=0,LAGMETHOD=SIC,MAXLAG=15)
+	FREEZE(RSSM3_KPSS)		RSSM3.UROOT(KPSS,C,HAC=QS,BAND=12)	
+EQUATION RSSM4_EQ.LS(COV=HAC, COVLAG=A, COVINFO=SIC, COVKERN=QUADSPEC, COVBW=ANDREWS) D(I_P_CEP) C 
+
+	RSSM4_EQ.MAKERESIDS RSSM4_RESIDS
+	SCALAR RSSM4_SD = @STDEV(RSSM4_RESIDS)
+	SERIES RSSM4=RSSM4_RESIDS/RSSM4_SD
+	GROUP RSSM4_RESIDS_2 RSSM4_RESIDS RSSM4
+	
+	FREEZE(RSSM4_ADF)		RSSM4.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=18)
+	FREEZE(RSSM4_DFGLS)		RSSM4.UROOT(DFGLS,C,DIF=0,LAGMETHOD=SIC,MAXLAG=15)
+	FREEZE(RSSM4_KPSS)		RSSM4.UROOT(KPSS,C,HAC=QS,BAND=12)	
+EQUATION RSSM5_EQ.LS(COV=HAC, COVLAG=A, COVINFO=SIC, COVKERN=QUADSPEC, COVBW=ANDREWS) D(I_P_INFO) C 
+
+	RSSM5_EQ.MAKERESIDS RSSM5_RESIDS
+	SCALAR RSSM5_SD = @STDEV(RSSM5_RESIDS)
+	SERIES RSSM5=RSSM5_RESIDS/RSSM5_SD
+	GROUP RSSM5_RESIDS_2 RSSM5_RESIDS RSSM5
+	
+	FREEZE(RSSM5_ADF)		RSSM5.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=18)
+	FREEZE(RSSM5_DFGLS)		RSSM5.UROOT(DFGLS,C,DIF=0,LAGMETHOD=SIC,MAXLAG=15)
+	FREEZE(RSSM5_KPSS)		RSSM5.UROOT(KPSS,C,HAC=QS,BAND=12)
+ '-------------------------------------------------------'
+ '					Inertial Modelling					 '
+ '-------------------------------------------------------'
+ 
+ '-- ARIMA --'
+	SMPL 1947 2024
+	EQUATION 	ARIMA_P_Semi.LS(ARMA=CLS) D(P_Semi) C AR(1)
+'			ARIMA_P_Semi.STATS
+			ARIMA_P_Semi.MAKERESIDS ARIMA_P_Semi_RESIDS
+	FREEZE		ARIMA_P_Semi_RESIDS.IDENT(10)
+	
+	EQUATION 	ARIMA_K$.LS(ARMA=CLS) D(K$) C MA(1)
+'			ARIMA_K$.STATS
+			ARIMA_K$.MAKERESIDS ARIMA_K$_RESIDS
+	FREEZE		ARIMA_K$_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_K_INFO$.LS(ARMA=CLS) D(K_INFO$) C  AR(1)
+'			ARIMA_K_INFO$.STATS
+			ARIMA_K_INFO$.MAKERESIDS ARIMA_K_INFO$_RESIDS
+	FREEZE		ARIMA_K_INFO$_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_K_INDEQ$.LS(ARMA=CLS) D(LOG(K_INDEQ$)) C AR(3) AR(4)
+'			ARIMA_K_INDEQ$.STATS
+			ARIMA_K_INDEQ$.MAKERESIDS ARIMA_K_INDEQ$_RESIDS
+	FREEZE		ARIMA_K_INDEQ$_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_K_TECH$.LS(ARMA=CLS) D(K_TECH$) C AR(1)
+'			ARIMA_K_TECH$.STATS
+			ARIMA_K_TECH$.MAKERESIDS ARIMA_K_TECH$_RESIDS
+	FREEZE		ARIMA_K_TECH$_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_L_INFO.LS(ARMA=CLS) D(L_INFO) C AR(1)
+'			ARIMA_L_INFO.STATS
+			ARIMA_L_INFO.MAKERESIDS ARIMA_L_INFO_RESIDS
+	FREEZE		ARIMA_L_INFO_RESIDS.IDENT(10)
+	
+	EQUATION 	ARIMA_L_CEP.LS(ARMA=CLS) D(L_CEP) C 
+'			ARIMA_L_CEP.STATS
+			ARIMA_L_CEP.MAKERESIDS ARIMA_L_CEP_RESIDS
+	FREEZE		ARIMA_L_CEP_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_L_SEMI.LS(ARMA=CLS) D(L_SEMI) C AR(1) AR(2)
+'			ARIMA_L_SEMI.STATS
+			ARIMA_L_SEMI.MAKERESIDS ARIMA_L_SEMI_RESIDS
+	FREEZE		ARIMA_L_SEMI_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_L_ELEC.LS(ARMA=CLS) D(L_ELEC) C 
+'			ARIMA_L_ELEC.STATS
+			ARIMA_L_ELEC.MAKERESIDS ARIMA_L_ELEC_RESIDS
+	FREEZE		ARIMA_L_ELEC_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_P_OIL.LS(ARMA=CLS) D(P_OIL) C AR(2) AR(7)
+'			ARIMA_P_OIL.STATS
+			ARIMA_P_OIL.MAKERESIDS ARIMA_P_OIL_RESIDS
+	FREEZE		ARIMA_P_OIL_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_P_COP_PROD.LS(ARMA=CLS) D(P_COP_PROD) C AR(8)
+'			ARIMA_P_COP_PROD.STATS
+			ARIMA_P_COP_PROD.MAKERESIDS ARIMA_P_COP_PROD_RESIDS
+	FREEZE		ARIMA_P_COP_PROD_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_P_COP_BRASS.LS(ARMA=CLS) D(P_COP_BRASS) C AR(4) AR(8)
+'			ARIMA_P_COP_BRASS.STATS
+			ARIMA_P_COP_BRASS.MAKERESIDS ARIMA_P_COP_BRASS_RESIDS
+	FREEZE		ARIMA_P_COP_BRASS_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_P_B_T_C.LS(ARMA=CLS) D(P_B_T_C) C AR(1) AR(3) 
+'			ARIMA_P_B_T_C.STATS
+			ARIMA_P_B_T_C.MAKERESIDS ARIMA_P_B_T_C_RESIDS
+	FREEZE		ARIMA_P_B_T_C_RESIDS.IDENT(10)
+
+	EQUATION 	ARIMA_MFP.LS(ARMA=CLS) D(MFP) C 
+'			ARIMA_MFP.STATS
+			ARIMA_MFP.MAKERESIDS ARIMA_MFP_RESIDS
+	FREEZE		ARIMA_MFP_RESIDS.IDENT(10)
+
+	SMPL 2025 2029
+	%VARS = "P_SEMI K$ K_INFO$ K_INDEQ$ K_TECH$ L_INFO L_CEP L_SEMI L_ELEC P_OIL P_COP_PROD P_COP_BRASS P_B_T_C MFP"
+
+FOR %V {%VARS}
+  ' FORECAST USING ARIMA OBJECT NAMED ARIMA_%V
+  ARIMA_{%V}.FORECAST {%V}_F
+
+  ' ASSIGN FORECASTED VALUES BACK TO THE ORIGINAL SERIES
+  SERIES {%V} = {%V}_F
+NEXT
+
+	SMPL @ALL
+
+%VARS = "K$ K_INFO$ K_INDEQ$ K_TECH$ L_INFO L_CEP L_SEMI L_ELEC P_SEMI P_OIL P_COP_PROD P_COP_BRASS P_B_T_C MFP PATGRANT HK PK$ K_IP$ RND$"
+
+FOR %V {%VARS}
+  SERIES GR_{%V} = @PC({%V})
+NEXT
+
+	SMPL 2019 2029
+'--- List of growth rate series
+%vars = "GR_K$ GR_K_INFO$ GR_K_INDEQ$ GR_K_TECH$ GR_L_INFO GR_L_CEP GR_L_SEMI GR_L_ELEC GR_P_SEMI GR_P_OIL GR_P_COP_PROD GR_P_COP_BRASS GR_P_B_T_C GR_MFP GR_PATGRANT GR_HK GR_PK$ GR_K_IP$ GR_RND$"
+
+for %v {%vars}
+    %gname = @replace(%v, "$", "$")
+    graph {%gname}_LINE.line(b,w) {%v}
+    {%gname}_LINE.delete text
+    {%gname}_LINE.draw(shade, bottom, @rgb(230,230,230)) 2025 2029 
+	%titletext = "Growth Rates for " + %v
+	{%gname}_LINE.addtext(1, -.5, font(cambria, 16, bold)) {%titletext}
+    {%gname}_LINE.addtext(3.25, .05, font(cambria, 9)) "Forecast (2025-2029)"
+	{%gname}_LINE.SETELEM(1) LINEWIDTH(3) LINEOPACITY(OFF,1)
+	{%gname}_LINE.save(t=png, u=in, w=5, d=300) F:\ECON\Capstone\Capstone_Workfile\Charts\{%gname}_LINE
+next
+
+ '-- VAR --'
+ 
+ '-------------------------------------------------------'
+ '					Model Building						 '
+ '-------------------------------------------------------'
+ '--- ITVs ---'
+	SMPL @ALL
+		SERIES STEP_2000=0.0
+	SMPL 2001 @LAST
+		SERIES STEP_2000 = 1.0
+	SMPL @ALL
+		SERIES SPIKE_2000=0.0
+	SMPL 2000 2000
+		SERIES SPIKE_2000 = 1.0
+		
+	SMPL @ALL 
+		SERIES ITV_CEP=0.0
+	SMPL 1997 1999
+		SERIES ITV_CEP=1.0
+	SMPL 2000 2000
+		SERIES ITV_CEP=2.0
+	
+ '-- Structural Regressions --'
+	SMPL 1947 2024
+'------------------------ 1st Block ------------------------'
+' -- Usable Variables: MFP, PatGrant, K_IP$, RnD$			'
+'-- All must have negative coefficients according to theory '
+'-----------------------------------------------------------'
+'-- I_P_CEP regression including only MFP and K_IP$
+'	smpl @all
+
+'-- Total combinations = 6 x 6 x 6 x 6 = 1296
+'	table(1297,9) tstats_table
+
+'-- Column headers
+'	tstats_table(1,1) = "MFP_LAG"
+'	tstats_table(1,2) = "PatGrant_LAG"
+'	tstats_table(1,3) = "K_IP$_LAG"
+'	tstats_table(1,4) = "RND$_LAG"
+'	tstats_table(1,5) = "tstat_DLOG_MFP"
+'	tstats_table(1,6) = "tstat_DLOG_PatGrant"
+'	tstats_table(1,7) = "tstat_DLOG_K_IP$"
+'	tstats_table(1,8) = "tstat_DLOG_RND$"
+'	tstats_table(1,9) = "tstat_Constant"
+
+'	!count = 0
+
+'	for !mfp_lag = 0 to 5
+'	for !pat_lag = 0 to 5
+'	for !kip_lag = 0 to 5
+'	for !rnd_lag = 0 to 5
+
+'	    !count = !count + 1
+'	    %eqname = "eq_" + @str(!count)
+
+    '-- Equation: dependent is log(I_P_CEP / RND$), differenced
+'	    %eqstring = "D(LOG(I_P_CEP / RND$)) C " + _
+'	                "D(LOG(MFP(-" + @str(!mfp_lag) + "))) " + _
+'	                "D(LOG(PatGrant(-" + @str(!pat_lag) + "))) " + _
+'	                "D(LOG(K_IP$(-" + @str(!kip_lag) + "))) " + _
+'		            "D(LOG(RND$(-" + @str(!rnd_lag) + ")))"
+
+    '-- Estimate equation
+'	equation {%eqname}.ls(cov=hac, covlag=a, covCEP=sic, covkern=quadspec, covbw=andrews) {%eqstring}
+
+    '-- Store lag settings
+'	tstats_table(!count + 1, 1) = @str(!mfp_lag)
+'	tstats_table(!count + 1, 2) = @str(!pat_lag)
+'	tstats_table(!count + 1, 3) = @str(!kip_lag)
+'	tstats_table(!count + 1, 4) = @str(!rnd_lag)
+
+    '-- Store t-stats (order: 1=const, 2=MFP, 3=PatGrant, 4=K_IP$, 5=RND$)
+'	tstats_table(!count + 1, 5) = @str({%eqname}.@tstats(2))
+'	tstats_table(!count + 1, 6) = @str({%eqname}.@tstats(3))
+'	tstats_table(!count + 1, 7) = @str({%eqname}.@tstats(4))
+'	tstats_table(!count + 1, 8) = @str({%eqname}.@tstats(5))
+'	tstats_table(!count + 1, 9) = @str({%eqname}.@tstats(1))
+
+'	next
+'	next
+'	next
+'	next
+
+'-- Show and export
+'	show tstats_table
+'	tstats_table.save(t=xlsx) "F:\ECON\CAPSTONE\CAPSTONE_WORKFILE\INDUSTRY_DEFLATOR_CEP_OLS_YDIVRND_RESULTS.xlsx"
+
+EQUATION OLS_I_P_CEP.LS(COV=HAC, COVLAG=A, COVINFO=SIC, COVKERN=QUADSPEC, COVBW=ANDREWS) D(LOG(I_P_CEP / RND$)) C D(LOG(MFP(-3))) D(LOG(PATGRANT(-0))) D(LOG(K_IP$(-2))) D(LOG(RND$(-4)))
+EQUATION FMOLS_I_P_CEP.COINTREG(METHOD=FMOLS,KERN=QUADSPEC,BW=ANDREWS) LOG(I_P_CEP) C LOG(MFP) LOG(PatGrant) LOG(K_IP$) LOG(RND$)
+	FMOLS_I_P_CEP.MAKERESIDS 		FMOLS_I_P_CEP_RESIDS
+	FREEZE(I_P_CEP_RESIDS_ADF)		FMOLS_I_P_CEP_RESIDS.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=10)
+	
+	'-- I_P_Info
+EQUATION OLS_I_P_Info.LS(COV=HAC, COVLAG=A, COVINFO=SIC, COVKERN=QUADSPEC, COVBW=ANDREWS) D(LOG(I_P_INFO/RND$)) C D(LOG(MFP(-3))) D(LOG(PATGRANT(-3))) D(LOG(K_IP$(-2))) D(LOG(RND$(-4)))
+EQUATION FMOLS_I_P_Info.COINTREG(METHOD=FMOLS,KERN=QUADSPEC,BW=ANDREWS) LOG(I_P_Info) C LOG(MFP) LOG(RnD$) LOG(PatGrant(-4))
+	FMOLS_I_P_Info.MAKERESIDS 		FMOLS_I_P_Info_RESIDS
+	FREEZE(I_P_Info_RESIDS_ADF)		FMOLS_I_P_Info_RESIDS.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=10)
+	
+'------------------------ 2nd Block ------------------------'
+' -- Useable Variables: 
+'
+'-----------------------------------------------------------'
+	'-- I_P_Tech Tautology
+ 
+EQUATION OLS_I_P_Tech.LS(COV=HAC, COVLAG=A, COVINFO=SIC, COVKERN=QUADSPEC, COVBW=ANDREWS) I_P_Tech C I_P_CEP I_P_INFO(-1)
+
+'EQUATION FMOLS_I_P_Tech.COINTREG(METHOD=FMOLS,KERN=QUADSPEC,BW=ANDREWS) I_P_Tech C I_P_CEP I_P_INFO(-1)
+'	FMOLS_I_P_Tech.MAKERESIDS 		FMOLS_I_P_Tech_RESIDS
+'	FREEZE(I_P_Tech_RESIDS_ADF)		FMOLS_I_P_Tech_RESIDS.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=10)
+	
+'------------------------ 3rd Block ------------------------'
+' -- Useable Variables: 
+'
+'-----------------------------------------------------------'
+
+'-- GDP_CEP$
+'smpl @all
+'table(2000,15) adf_results_table
+'adf_results_table(1,1)  = "K_INDEQ$_LAG"
+'adf_results_table(1,2)  = "HK_LAG"
+'adf_results_table(1,3)  = "L_CEP_LAG"
+'adf_results_table(1,4)  = "PK_LAG"
+'adf_results_table(1,5)  = "RND_LAG"
+'adf_results_table(1,6)  = "P_OIL_LAG"
+'adf_results_table(1,7)  = "ADF_STAT"
+'adf_results_table(1,8)  = "ADF_LAG"
+'adf_results_table(1,9)  = "ADF_CRIT_5PCT"
+'adf_results_table(1,10) = "TSTAT_K_INDEQ$"
+'adf_results_table(1,11) = "TSTAT_HK"
+'adf_results_table(1,12) = "TSTAT_RND$"
+'adf_results_table(1,13) = "TSTAT_P_OIL"
+'adf_results_table(1,14) = "TSTAT_CONST"
+'
+'!count = 0
+'
+'for !k_lag = 0 to 2
+'for !hk_lag = 0 to 2
+'for !l_lag = 0 to 2
+'for !pk_lag = 0 to 2
+'for !rnd_lag = 0 to 2
+'for !oil_lag = 0 to 5
+'
+'    !count = !count + 1
+'    %eqname     = "eq_" + @str(!count)
+'    %residname  = "resid_" + @str(!count)
+'    %uresulttab = "ures_" + @str(!count)
+'    %temp_tab   = "temp_table_" + @str(!count)
+'
+'    ' Build regression equation string with only P_OIL
+'    %eqstring = "LOG(GDP_CEP$/L_CEP(-" + @str(!l_lag) + ")) C " + _
+'                "LOG(K_INDEQ$(-" + @str(!k_lag) + ")/L_CEP(-" + @str(!l_lag) + ")) " + _
+'                "LOG(HK(-" + @str(!hk_lag) + ")/L_CEP(-" + @str(!l_lag) + ")) " + _
+'                "LOG(RND$(-" + @str(!rnd_lag) + ")/PK$(-" + @str(!pk_lag) + ")) " + _
+'                "LOG(P_OIL(-" + @str(!oil_lag) + ")) "
+'
+'    ' Run FMOLS regression
+'    equation {%eqname}.cointreg(method=fmols, kern=quadspec, bw=andrews) {%eqstring}
+'
+'    ' Save residuals
+'    {%eqname}.makeresids {%residname}
+'
+'    ' Run ADF test on residuals
+'    freeze({%uresulttab}) {%residname}.uroot(adf, n, lagmethod=sic, maxlag=10)
+'
+'    ' Copy ADF output to temporary table
+'    table {%temp_tab}
+'    {%uresulttab}.copyrange D7 F7 {%temp_tab} A1
+'
+'    !adf_stat   = @val({%temp_tab}(1,1))
+'    !adf_lag    = @val({%temp_tab}(1,2))
+'    !adf_crit5  = @val({%temp_tab}(1,3))
+'
+'    ' Extract t-stats (order: K_INDEQ$, HK, RND$, P_OIL, CONST)
+'    !tstat_k     = {%eqname}.@tstats(1)
+'    !tstat_hk    = {%eqname}.@tstats(2)
+'    !tstat_rnd   = {%eqname}.@tstats(3)
+'    !tstat_oil   = {%eqname}.@tstats(4)
+'    !tstat_const = {%eqname}.@tstats(5)
+
+'    ' Store results
+'    adf_results_table(!count + 1, 1)  = @str(!k_lag)
+'    adf_results_table(!count + 1, 2)  = @str(!hk_lag)
+'    adf_results_table(!count + 1, 3)  = @str(!l_lag)
+'    adf_results_table(!count + 1, 4)  = @str(!pk_lag)
+'    adf_results_table(!count + 1, 5)  = @str(!rnd_lag)
+'    adf_results_table(!count + 1, 6)  = @str(!oil_lag)
+'    adf_results_table(!count + 1, 7)  = @str(!adf_stat)
+'    adf_results_table(!count + 1, 8)  = @str(!adf_lag)
+'    adf_results_table(!count + 1, 9)  = @str(!adf_crit5)
+'    adf_results_table(!count + 1, 10) = @str(!tstat_k)
+'    adf_results_table(!count + 1, 11) = @str(!tstat_hk)
+'    adf_results_table(!count + 1, 12) = @str(!tstat_rnd)
+'    adf_results_table(!count + 1, 13) = @str(!tstat_oil)
+'    adf_results_table(!count + 1, 14) = @str(!tstat_const)
+
+'next
+'next
+'next
+'next
+'next
+'next
+
+'	show adf_results_table
+
+
+
+	EQUATION FMOLS_GDP_CEP$.COINTREG(METHOD=FMOLS,KERN=QUADSPEC,BW=ANDREWS) 	LOG(GDP_CEP$/L_CEP) C LOG(K_INDEQ$/L_CEP) LOG(HK/L_CEP) LOG(RND$/PK$(-5)) ITV_CEP
+'	EQUATION FMOLS_GDP_CEP$.COINTREG(METHOD=FMOLS,KERN=QUADSPEC,BW=ANDREWS) 	LOG(GDP_CEP$/L_CEP(-1)) C LOG(K_INDEQ$(-1)/L_CEP(-1)) LOG(HK/L_CEP(-1)) LOG(RND$(-1)/PK$(-1))  LOG(P_OIL)
+'	EQUATION FMOLS_GDP_CEP$.COINTREG(METHOD=FMOLS,KERN=QUADSPEC,BW=ANDREWS) 	LOG(GDP_CEP$/L_CEP()) C LOG(K_INDEQ$(-1)/L_CEP()) LOG(HK/L_CEP()) LOG(RND$()/PK$(-2))  LOG(P_OIL) SPIKE_2000
+'	EQUATION FMOLS_GDP_CEP$.COINTREG(METHOD=FMOLS,KERN=QUADSPEC,BW=ANDREWS) 	LOG(GDP_CEP$/L_CEP) C LOG(K_INDEQ$/L_CEP) LOG(HK/L_CEP) LOG(RND$/L_CEP) LOG(RND$/L_CEP)^2 LOG(K_INDEQ$/L_CEP)*LOG(HK/L_CEP) LOG(K_INDEQ$/L_CEP)*LOG(RND$/PK$()) LOG(HK/L_CEP)*LOG(RND$/L_CEP)
+
+	
+	FMOLS_GDP_CEP$.MAKERESIDS 			FMOLS_GDP_CEP$_RESIDS
+	FREEZE(GDP_CEP$_RESIDS_ADF)			FMOLS_GDP_CEP$_RESIDS.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=10)
+	
+	SCALAR RSSM_CEP$_SD = @STDEV(FMOLS_GDP_CEP$_RESIDS)
+	SERIES RSSM_CEP$=FMOLS_GDP_CEP$_RESIDS/RSSM_CEP$_SD
+	GROUP RSSM_RESIDS_2 FMOLS_GDP_CEP$_RESIDS RSSM_CEP$
+	
+	FREEZE(RSSM_CEP$_ADF)		RSSM_CEP$.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=18)
+	
+'-- GDP_Info$
+'	smpl @all
+'	table(216,10) adf_results_table
+'	adf_results_table(1,1) = "K_INFO$_LAG"
+'	adf_results_table(1,2) = "PK$_LAG"
+'	adf_results_table(1,3) = "L_INFO_LAG"
+'	adf_results_table(1,4) = "ADF_STAT"
+'	adf_results_table(1,5) = "ADF_LAG"
+'	adf_results_table(1,6) = "ADF_CRIT_5PCT"
+'	adf_results_table(1,7) = "TSTAT_K_INFO$"
+'	adf_results_table(1,8) = "TSTAT_PK$"
+'	adf_results_table(1,9)= "TSTAT_CONST"
+'	!count = 0
+'	for !k_lag = 0 to 5
+'	for !pk_lag = 0 to 5
+'	for !l_lag = 0 to 5
+'	!count = !count + 1
+'	%eqname     = "eq_" + @str(!count)
+'	%residname  = "resid_" + @str(!count)
+'	%uresulttab = "ures_" + @str(!count)
+'	%temp_tab   = "temp_table_" + @str(!count)
+'	%eqstring = "LOG(GDP_INFO$/L_INFO(-" + @str(!l_lag) + ")) C " + _
+'	            "LOG(K_INFO$(-" + @str(!k_lag) + ")/L_INFO(-" + @str(!l_lag) + ")) " + _
+'	            "LOG(PK$(-"     + @str(!pk_lag) + ")/L_INFO(-" + @str(!l_lag) + "))"
+'	equation {%eqname}.cointreg(method=fmols, kern=quadspec, bw=andrews) {%eqstring}
+'	{%eqname}.makeresids {%residname}
+'	freeze({%uresulttab}) {%residname}.uroot(adf, n, lagmethod=sic, maxlag=10)
+'	table {%temp_tab}
+'	{%uresulttab}.copyrange D7 F7 {%temp_tab} A1
+'	!adf_stat   = @val({%temp_tab}(1,1))
+'	!adf_lag    = @val({%temp_tab}(1,2))
+'	!adf_crit5  = @val({%temp_tab}(1,3))
+'    ' Extract t-stats from the equation object
+'	!tstat_k    = {%eqname}.@tstats(1)
+'	!tstat_pk   = {%eqname}.@tstats(2)
+'	!tstat_const = {%eqname}.@tstats(3)
+'	adf_results_table(!count + 1, 1) = @str(!k_lag)
+'	adf_results_table(!count + 1, 2) = @str(!pk_lag)
+'	adf_results_table(!count + 1, 3) = @str(!l_lag)
+'	adf_results_table(!count + 1, 4) = @str(!adf_stat)
+'	adf_results_table(!count + 1, 5) = @str(!adf_lag)
+'	adf_results_table(!count + 1, 6) = @str(!adf_crit5)
+'	adf_results_table(!count + 1, 7) = @str(!tstat_k)
+'	adf_results_table(!count + 1, 8) = @str(!tstat_pk)
+'	adf_results_table(!count + 1, 9) = @str(!tstat_const)
+'	next
+'	next
+'	next
+'	show adf_results_table
+
+	EQUATION FMOLS_GDP_INFO$.COINTREG(METHOD=FMOLS,KERN=QUADSPEC,BW=ANDREWS) LOG(GDP_INFO$/L_INFO(-3)) C LOG(K_INFO$(-5)/L_INFO(-3)) LOG(PK$(-2)/L_INFO(-3))
+	FMOLS_GDP_Info$.MAKERESIDS 			FMOLS_GDP_Info$_RESIDS
+	FREEZE(GDP_Info$_RESIDS_ADF)		FMOLS_GDP_Info$_RESIDS.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=10)
+	
+	SCALAR RSSM_Info$_SD = @STDEV(FMOLS_GDP_Info$_RESIDS)
+	SERIES RSSM_Info$=FMOLS_GDP_Info$_RESIDS/RSSM_Info$_SD
+	GROUP RSSM_RESIDS_3 FMOLS_GDP_Info$_RESIDS RSSM_Info$
+	
+	FREEZE(RSSM_Info$_ADF)		RSSM_Info$.UROOT(ADF,N,LAGMETHOD=SIC,MAXLAG=18)
+	
+ '-- Model Build --' 
+ MODEL CAPSTONE_MOD
+ 
+ SERIES GDP_TECH2 = GDP_INFO + GDP_CEP
+ SERIES GDP_TECH_SD = GDP_TECH - GDP_TECH2
+ 
+'CAPSTONE_MOD.MERGE		FMOLS_I_P_CEP
+'CAPSTONE_MOD.MERGE		FMOLS_I_P_Info
+'CAPSTONE_MOD.MERGE		FMOLS_I_P_Tech
+CAPSTONE_MOD.MERGE		OLS_I_P_CEP
+CAPSTONE_MOD.MERGE		OLS_I_P_Info
+CAPSTONE_MOD.MERGE		OLS_I_P_Tech
+
+CAPSTONE_MOD.MERGE 		FMOLS_GDP_CEP$
+CAPSTONE_MOD.MERGE 		FMOLS_GDP_Info$
+
+CAPSTONE_MOD.APPEND GDP_Tech$ 	= GDP_CEP$ + GDP_Info$
+CAPSTONE_MOD.APPEND GDP_Tech 	= GDP_Tech$ * (I_P_Tech/100)
+CAPSTONE_MOD.APPEND GDP_INFO 	= GDP_INFO$ * (I_P_INFO/100)
+CAPSTONE_MOD.APPEND GDP_CEP 	= GDP_CEP$  * (I_P_CEP/100)
+CAPSTONE_MOD.APPEND GDP_TECH2	= GDP_INFO + GDP_CEP
+CAPSTONE_MOD.APPEND GDP_TECH_SD = GDP_TECH - GDP_TECH2
+
+ '------------------------------------------------------'
+ '					Forecasting							'
+ '------------------------------------------------------'
+ '-HISTORICAL SOLVE-'
+'AKA IN SAMPLE FORECAST'
+
+CAPSTONE_MOD.APPEND ASSIGN @ALL _SH
+SMPL 2015 2019
+CAPSTONE_MOD.SOLVE
+
+ '------------------------------------------------------'
+ '					Scenarios							'
+ '------------------------------------------------------'
+ '-- SETUP --' 
+ SMPL @FIRST 2024
+%VARS = "PK$ HK RND$ K_IP$ PATGRANT"
+
+FOR %V {%VARS}
+	SERIES GR_{%V} = @PC({%V})
+NEXT 
+
+	SMPL 2025 2029
+
+'-- BASE CASE --'
+	GR_PK$.FILL(S) 		 1.00,  1.50,  2.00,  2.50,  2.50
+	GR_HK.FILL(S)  		 0.12,  0.12,  0.12,  0.12,  0.12
+	GR_RND$.FILL(S) 	 7.33,  7.68,  8.00,  8.00,  8.00
+	GR_K_IP$.FILL(S)	 8.40,  8.70,  9.00,  9.00,  9.00
+	GR_PATGRANT.FILL(S) -2.50, -1.50, -0.50,  1.50,  2.50
+	
+	FOR %V {%VARS}
+		SERIES {%V} = {%V}(-1)*(1 + GR_{%V}/100)
+	NEXT
+CAPSTONE_MOD.APPEND ASSIGN @ALL _BASE
+
+CAPSTONE_MOD.ADDASSIGN(V) GDP_CEP$ GDP_INFO$ I_P_TECH
+  SERIES GDP_CEP$_A  = -152
+  SERIES GDP_INFO$_A = +400
+  SERIES I_P_TECH_A  = +15
+  
+CAPSTONE_MOD.SOLVE
+
+'-- OPTIMISTIC CASE --'
+	GR_PK$.FILL(S) 		 2.00,  3.00,  4.00,  4.50,  5.50
+	GR_HK.FILL(S)  		 0.22,  0.22,  0.22,  0.22,  0.22
+	GR_RND$.FILL(S) 	 9.00, 10.00, 11.00, 12.00, 14.00
+	GR_K_IP$.FILL(S)	 9.00, 10.00, 11.00, 12.00, 14.00
+	GR_PATGRANT.FILL(S)  0.00,  1.00,  2.50,  4.50,  7.00
+			
+	FOR %V {%VARS}
+		SERIES {%V} = {%V}(-1)*(1 + GR_{%V}/100)
+	NEXT
+CAPSTONE_MOD.APPEND ASSIGN @ALL _OPT
+
+CAPSTONE_MOD.ADDASSIGN(V) GDP_CEP$ GDP_INFO$ I_P_TECH
+  SERIES GDP_CEP$_A  = -152
+  SERIES GDP_INFO$_A = +400
+  SERIES I_P_TECH_A  = +15
+  
+CAPSTONE_MOD.SOLVE
+
+'-- PESSIMISTIC CASE --'
+	GR_PK$.FILL(S) 		 0.50,  0.00, -0.50, -1.00, -1.50
+	GR_HK.FILL(S)  		 0.06,  0.06,  0.06,  0.06,  0.06
+	GR_RND$.FILL(S) 	 6.00,  5.00,  4.00,  3.00,  2.00
+	GR_K_IP$.FILL(S)	 7.00,  6.50,  5.50,  4.50,  3.50
+	GR_PATGRANT.FILL(S) -2.50, -3.00, -3.50, -4.00, -4.50
+	
+	FOR %V {%VARS}
+		SERIES {%V} = {%V}(-1)*(1 + GR_{%V}/100)
+	NEXT
+CAPSTONE_MOD.APPEND ASSIGN @ALL _PESS
+
+CAPSTONE_MOD.ADDASSIGN(V) GDP_CEP$ GDP_INFO$ I_P_TECH
+  SERIES GDP_CEP$_A  = -152
+  SERIES GDP_INFO$_A = +400
+  SERIES I_P_TECH_A  = +15
+
+CAPSTONE_MOD.SOLVE
+
+ '------------------------------------------------------'
+ '					Competitor VARs						'
+ '------------------------------------------------------'
+ '-- Growth Factors --'
+	SMPL 1947 2024
+	VAR 	BVAR_1.BVAR 1 2 D(LOG(GDP_Info$)) D(LOG(RnD$)) D(LOG(MFP)) D(LOG(GDP_CEP$)) @ C
+	FREEZE(RESULTS_BVAR_1) 		BVAR_1.RESULTS
+	FREEZE(ROOTS_BVAR_1) 		BVAR_1.ARROOTS
+'	FREEZE(LAGLEN_BVAR_1) 		BVAR_1.LAGLEN(10)
+'	FREEZE(TESTEXOG_BVAR_1) 	BVAR_1.TESTEXOG(10)
+		BVAR_1.MAKEMODEL(BVAR_1_MOD)
+		
+		BVAR_1_MOD.APPEND ASSIGN @ALL _BVH1
+	SMPL 	2015 2019
+		BVAR_1_MOD.SOLVE
+	
+		BVAR_1_MOD.APPEND ASSIGN @ALL _BVF1
+	SMPL 	2025 2029
+		BVAR_1_MOD.SOLVE
+	SMPL @ALL
+	SERIES GDP_TECH$_BVF1 = GDP_INFO$_BVF1 + GDP_CEP$_BVF1
+'-----------------------------------------------------------'
+	SMPL 1947 2024
+	VAR 	VAR_1.LS 1 2 D(LOG(GDP_Info$)) D(LOG(RnD$)) D(LOG(MFP)) D(LOG(GDP_CEP$)) @ C
+	FREEZE(RESULTS_VAR_1) 		VAR_1.RESULTS
+	FREEZE(ROOTS_VAR_1) 		VAR_1.ARROOTS
+	FREEZE(LAGLEN_VAR_1) 		VAR_1.LAGLEN(10)
+	FREEZE(TESTEXOG_VAR_1) 		VAR_1.TESTEXOG(10)
+		VAR_1.MAKEMODEL(VAR_1_MOD)
+
+		VAR_1_MOD.APPEND ASSIGN @ALL _VH1
+	SMPL 	2015 2019
+		VAR_1_MOD.SOLVE	
+		
+		VAR_1_MOD.APPEND ASSIGN @ALL _VF1
+		
+	SMPL 	2025 2029
+		VAR_1_MOD.SOLVE
+	SMPL @ALL
+	SERIES GDP_TECH$_VF1 = GDP_INFO$_VF1 + GDP_CEP$_VF1
+'---------------------------'
+ '-- Capital Inputs
+	SMPL 1947 2024
+	VAR 	BVAR_2.BVAR 1 3 D(LOG(GDP_Info$)) D(LOG(K_Info$)) D(LOG(K_INDEQ$)) D(LOG(GDP_CEP$)) @ C
+	FREEZE(RESULTS_BVAR_2) 		BVAR_2.RESULTS
+	FREEZE(ROOTS_BVAR_2) 		BVAR_2.ARROOTS
+'	FREEZE(LAGLEN_BVAR_2) 		BVAR_2.LAGLEN(10)
+'	FREEZE(TESTEXOG_BVAR_2) 	BVAR_2.TESTEXOG(10)
+		BVAR_2.MAKEMODEL(BVAR_2_MOD)
+
+		BVAR_2_MOD.APPEND ASSIGN @ALL _BVH2
+	SMPL 	2015 2019
+		BVAR_2_MOD.SOLVE
+		
+		BVAR_2_MOD.APPEND ASSIGN @ALL _BVF2
+		
+	SMPL 	2025 2029
+		BVAR_2_MOD.SOLVE
+	SMPL @ALL
+	SERIES GDP_TECH$_BVF2 = GDP_INFO$_BVF2 + GDP_CEP$_BVF2
+'----------------------------'
+	SMPL 1947 2024
+	VAR 	VAR_2.LS 1 3 D(LOG(GDP_Info$)) D(LOG(K_Info$)) D(LOG(K_INDEQ$)) D(LOG(GDP_CEP$)) @ C
+	FREEZE(RESULTS_VAR_2) 		VAR_2.RESULTS
+	FREEZE(ROOTS_VAR_2) 		VAR_2.ARROOTS
+	FREEZE(LAGLEN_VAR_2) 		VAR_2.LAGLEN(10)
+	FREEZE(TESTEXOG_VAR_2) 		VAR_2.TESTEXOG(10)
+		VAR_2.MAKEMODEL(VAR_2_MOD)
+		
+		VAR_2_MOD.APPEND ASSIGN @ALL _VH2
+	SMPL 	2015 2019
+		VAR_2_MOD.SOLVE
+		
+		VAR_2_MOD.APPEND ASSIGN @ALL _VF2
+
+	SMPL 	2025 2029
+		VAR_2_MOD.SOLVE
+	SMPL @ALL
+	SERIES GDP_TECH$_VF2 = GDP_INFO$_VF2 + GDP_CEP$_VF2
+	
+ '------------------------------------------------------'
+ '					Forecast Charts						'
+ '------------------------------------------------------'
+SMPL 2015 2029
+%vars = "GDP_INFO$ GDP_CEP$ GDP_TECH$ GDP_TECH GDP_INFO GDP_CEP GDP_TECH2 I_P_CEP I_P_INFO I_P_TECH"
+for %v {%vars}
+    %groupname = %v + "_FCST_SCN"
+    group {%groupname} @pc({%v}_BASE) @pc({%v}_OPT) @pc({%v}_PESS) @pc({%v})
+    %graphname = %groupname + "_G"
+    graph {%graphname}.LINE {%groupname}
+	%titletext = "Scenario Forecasting for " + %v
+    {%graphname}.addtext(1,-.5,font(cambria,16)) {%titletext}
+    {%graphname}.draw(shade, bottom, @rgb(230,230,230)) 2025 2029
+    {%graphname}.setelem(4) legend("Annual Growth (Historical)")	linecolor(@rgb(0,0,0))		LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%graphname}.setelem(1) legend("Annual Growth (Baseline)") 		linecolor(@rgb(255,0,0))	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%graphname}.setelem(2) legend("Annual Growth (Optimistic)") 	linecolor(@rgb(0,255,0))	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+	{%graphname}.setelem(3) legend("Annual Growth (Pessimistic)") 	linecolor(@rgb(0,0,255)) 	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%graphname}.save(t=png, u=in, w=5, d=300) F:\ECON\Capstone\Capstone_Workfile\Charts\{%v}_FCST.png
+next
+
+
+SMPL 2025 2029
+SERIES RND$	=	NA
+SERIES MFP	=	NA
+SMPL 2015 2029
+%vars = "GDP_Info$ RnD$ MFP GDP_CEP$ GDP_TECH$"
+for %v {%vars}
+    %groupname = %v + "_FCST_SCN_BVF"
+    group {%groupname} @pc({%v}_BVF1) @pc({%v}_VF1)  @pc({%v})
+    %graphname = %groupname + "_G"
+    graph {%graphname}.LINE {%groupname}
+	%titletext = "Competitor Forecast 1 for " + %v
+    {%graphname}.addtext(1,-.5,font(cambria,16)) {%titletext}
+    {%graphname}.draw(shade, bottom, @rgb(230,230,230)) 2025 2029
+    {%graphname}.setelem(3) legend("Annual Growth (Historical)")	linecolor(@rgb(0,0,0))		LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%graphname}.setelem(1) legend("Annual Growth (BVAR1)") 		linecolor(@rgb(255,0,0))	LINEWIDTH(3)
+	{%graphname}.setelem(2) legend("Annual Growth (VAR1)") 			linecolor(@rgb(0,255,0))	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%graphname}.save(t=png, u=in, w=5, d=300) F:\ECON\Capstone\Capstone_Workfile\Charts\{%v}_FCST_VF1.png
+next
+
+SMPL 2025 2029
+SERIES K_Info$	=	NA
+SERIES K_IndEq$	=	NA
+SMPL 2015 2029
+%vars = "GDP_Info$ K_Info$ K_IndEq$ GDP_CEP$ GDP_TECH$"
+for %v {%vars}
+    %groupname = %v + "_FCST_SCN_VF"
+    group {%groupname} @pc({%v}_BVF2) @pc({%v}_VF2)  @pc({%v})
+    %graphname = %groupname + "_G"
+    graph {%graphname}.LINE {%groupname}
+	%titletext = "Competitor Forecast 2 for " + %v
+    {%graphname}.addtext(1,-.5,font(cambria,16)) {%titletext}
+    {%graphname}.draw(shade, bottom, @rgb(230,230,230)) 2025 2029
+    {%graphname}.setelem(3) legend("Annual Growth (Historical)")	linecolor(@rgb(0,0,0))		LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%graphname}.setelem(1) legend("Annual Growth (BVAR2)") 		linecolor(@rgb(255,0,0))	LINEWIDTH(3)
+	{%graphname}.setelem(2) legend("Annual Growth (VAR2)") 			linecolor(@rgb(0,255,0))	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%graphname}.save(t=png, u=in, w=5, d=300) F:\ECON\Capstone\Capstone_Workfile\Charts\{%v}_FCST_VF2.png
+next
+
+SMPL 2015 2024
+
+SERIES GR_PK$_BASE 		= GR_PK$
+SERIES GR_HK_BASE 		= GR_HK
+SERIES GR_RND$_BASE 	= GR_RND$
+SERIES GR_K_IP$_BASE 	= GR_K_IP$
+SERIES GR_PATGRANT_BASE = GR_PATGRANT
+SERIES GR_K_INFO$_BASE  = GR_K_INFO$		
+	
+SERIES GR_PK$_OPT 		= GR_PK$
+SERIES GR_HK_OPT		= GR_HK
+SERIES GR_RND$_OPT 		= GR_RND$
+SERIES GR_K_IP$_OPT 	= GR_K_IP$
+SERIES GR_PATGRANT_OPT  = GR_PATGRANT
+SERIES GR_K_INFO$_OPT 	= GR_K_INFO$_OPT
+
+SERIES GR_PK$_PESS 		= GR_PK$
+SERIES GR_HK_PESS		= GR_HK
+SERIES GR_RND$_PESS 	= GR_RND$
+SERIES GR_K_IP$_PESS 	= GR_K_IP$
+SERIES GR_PATGRANT_PESS = GR_PATGRANT
+
+SMPL 2025 2029
+	GR_PK$_BASE.FILL(S) 		 1.00,  1.50,  2.00,  2.50,  2.50
+	GR_HK_BASE.FILL(S)  		 0.12,  0.12,  0.12,  0.12,  0.12
+	GR_RND$_BASE.FILL(S) 	  	 7.33,  7.68,  8.00,  8.00,  8.00
+	GR_K_IP$_BASE.FILL(S)	 	 8.40,  8.70,  9.00,  9.00,  9.00
+	GR_PATGRANT_BASE.FILL(S)    -2.50, -1.50, -0.50,  1.50,  2.50
+	
+	GR_PK$_OPT.FILL(S) 			 2.00,  3.00,  4.00,  4.50,  5.50
+	GR_HK_OPT.FILL(S)  			 0.22,  0.22,  0.22,  0.22,  0.22
+	GR_RND$_OPT.FILL(S) 		 9.00, 10.00, 11.00, 12.00, 14.00
+	GR_K_IP$_OPT.FILL(S)		 9.00, 10.00, 11.00, 12.00, 14.00
+	GR_PATGRANT_OPT.FILL(S)		 0.00,  1.00,  2.50,  4.50,  7.00
+	
+	GR_PK$_PESS.FILL(S) 		 0.50,  0.00, -0.50, -1.00, -1.50
+	GR_HK_PESS.FILL(S)  		 0.06,  0.06,  0.06,  0.06,  0.06
+	GR_RND$_PESS.FILL(S) 		 6.00,  5.00,  4.00,  3.00,  2.00
+	GR_K_IP$_PESS.FILL(S)		 7.00,  6.50,  5.50,  4.50,  3.50
+	GR_PATGRANT_PESS.FILL(S)	-2.50, -3.00, -3.50, -4.00, -4.50
+	
+SERIES GR_PK$ 		= NA
+SERIES GR_HK 		= NA
+SERIES GR_RND$		= NA
+SERIES GR_K_IP$ 	= NA
+SERIES GR_PATGRANT  = NA
+SMPL 2015 2029
+%vars = "GR_PK$ GR_HK GR_RND$ GR_K_IP$ GR_PATGRANT"
+for %v {%vars}
+    %groupname = %v + "_FCST_SCN"
+    group {%groupname} ({%v}_BASE) ({%v}_OPT) ({%v}_PESS) ({%v})
+    %graphname = %groupname + "_G"
+    graph {%graphname}.LINE {%groupname}
+	%titletext = "Scenario Forecasting for " + %v
+    {%graphname}.addtext(1,-.5,font(cambria,16)) {%titletext}
+    {%graphname}.draw(shade, bottom, @rgb(230,230,230)) 2025 2029
+    {%graphname}.setelem(4) legend("Annual Growth (Historical)")	linecolor(@rgb(0,0,0))		LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%graphname}.setelem(1) legend("Annual Growth (Baseline)") 		linecolor(@rgb(255,0,0))	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%graphname}.setelem(2) legend("Annual Growth (Optimistic)") 	linecolor(@rgb(0,255,0))	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+	{%graphname}.setelem(3) legend("Annual Growth (Pessimistic)") 	linecolor(@rgb(0,0,255)) 	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%graphname}.save(t=png, u=in, w=5, d=300) F:\ECON\Capstone\Capstone_Workfile\Charts\{%v}_FCST.png
+next
+
+%VARS = "GDP_CEP$ GDP_INFO$ GDP_TECH$"
+FOR %v {%VARS}
+	%GROUPNAME = %V + "_FCST_COMP"
+	GROUP {%GROUPNAME} @PC({%V}_BVF1) @PC({%V}_VF1) @PC({%V}_BVF2) @PC({%V}_VF2) @PC({%V}_BASE) @PC({%V})
+	%GRAPHNAME = %GROUPNAME +"_G"
+    GRAPH {%GRAPHNAME}.LINE {%GROUPNAME}
+	%titletext = "Scenario Forecast Comparison for " + %V
+    {%GRAPHNAME}.addtext(0.5,-.5,font(cambria,16)) {%titletext}
+    {%GRAPHNAME}.draw(shade, bottom, @rgb(230,230,230)) 2025 2029
+    {%GRAPHNAME}.setelem(6) legend("Annual Growth (Historical)")	linecolor(@rgb(0,0,0))		LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%GRAPHNAME}.setelem(1) legend("Annual Growth (BVF1)") 			linecolor(@rgb(125,0,0))	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%GRAPHNAME}.setelem(2) legend("Annual Growth (VF1)") 			linecolor(@rgb(0,0,255))	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+	{%GRAPHNAME}.setelem(3) legend("Annual Growth (BVF2)") 			linecolor(@rgb(0,125,0)) 	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+	{%GRAPHNAME}.setelem(4) legend("Annual Growth (VF2)") 			linecolor(@rgb(0,255,0)) 	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+	{%GRAPHNAME}.setelem(5) legend("Annual Growth (Baseline)") 		linecolor(@rgb(255,0,0)) 	LINEWIDTH(3)	LINEOPACITY(OFF,1)
+    {%GRAPHNAME}.save(t=png, u=in, w=5, d=300) F:\ECON\Capstone\Capstone_Workfile\Charts\{%V}_FCST_COMP.png
+NEXT
+
+SMPL 1947 2029
+GROUP SEND_TO_R GDP_CEP$_BASE GDP_CEP$_VF1 GDP_CEP$_VF2 GDP_CEP$_SH GDP_CEP$_VH1 GDP_CEP$_VH2 GDP_CEP$ ITV_CEP
+	SEND_TO_R.TABLE
+	WRITE(T=TXT,D=C,DATES) SENT_TO_R.CSV SEND_TO_R
+SAVE Capstone.WF1
