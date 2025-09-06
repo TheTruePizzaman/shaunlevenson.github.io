@@ -40,7 +40,7 @@ For Exemplary Research in Economic Forecasting (California Lutheran University)
 
 **Econometrics**
 - <u>General Skills</u>:  Cross-Section Regression • Panel Regression • Time Series Analysis • Trend Analysis • Unit-Root Testing • Error Diagnostics (RMSE, MAPE) • Time Series Data Extraction • Scenario Forecasting • Combination Forecasting (Equal Weighting & Optimal Weighting) • Multi-Equation Modeling
-- <u>*Techniques*</u>: Cobb-Douglas & Translog Estimation • FMOLS • ARIMA • VAR • Bayesian VAR • GARCH • Difference in Differences • Probit • Logit • Linear Probability • 2SLS • Interventions
+- <u>Techniques</u>: Cobb-Douglas & Translog Estimation • FMOLS • ARIMA • VAR • Bayesian VAR • GARCH • Difference in Differences • Probit • Logit • Linear Probability • 2SLS • Interventions
 
 **Data Analytics**
 - Data Cleaning • Data Integration • Workflow Automation • Visualization • Supervised Learning (Regression, Classification, XGBoost, Random Forests, SVM, Logistic Regression, Lasso/Ridge/Elastic Net) • Unsupervised Learning (Clustering, PCA, Dimensionality Reduction) • Neural Networks • Model Validation & Cross-Validation • Hyperparameter Tuning
