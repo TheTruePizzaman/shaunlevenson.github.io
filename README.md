@@ -53,11 +53,11 @@ For Exemplary Research in Economic Forecasting (California Lutheran University)
 This [project](projects/Capstone/) models and forecasts the U.S. technology industry's production function and future GDP using econometric techniques, scenario analysis, and combination forecasting, integrating theory, data, and multiple predictive approaches to understand tech's impact on economic growth.
 
 **Policy Brief - California Environmental Policy**
-This project compares California’s main climate policy instruments—Renewable Portfolio Standard (RPS), Low Carbon Fuel Standard (LCFS), and Cap-and-Trade—using criteria of unit effectiveness, cost, efficiency, and equity, providing policy recommendations for fairer, more effective emissions reductions.
+This [project](projects/Environmental/) compares California’s main climate policy instruments—Renewable Portfolio Standard (RPS), Low Carbon Fuel Standard (LCFS), and Cap-and-Trade—using criteria of unit effectiveness, cost, efficiency, and equity, providing policy recommendations for fairer, more effective emissions reductions.
 
 **Policy Brief - Federal Funds Rate Target Assessment**
-This project evaluates whether the current U.S. Federal Funds Target Rate is appropriately set in 2025, drawing on economic data, theory, and expert opinion to argue for maintaining a steady rate amid inflation and growth uncertainties.
+This [project](projects/Macro-2/) evaluates whether the current U.S. Federal Funds Target Rate is appropriately set in 2025, drawing on economic data, theory, and expert opinion to argue for maintaining a steady rate amid inflation and growth uncertainties.
 
 **Predictive Modelling for Direct Marketing Optimization**
-This project applied predictive modeling to optimize direct marketing for a financial institution, using advanced AutoML techniques on a dataset of over one million customers to forecast product adoption, new sales, and purchase counts, guiding targeted marketing strategies.
+This [project](projects/Analytics) applied predictive modeling to optimize direct marketing for a financial institution, using advanced AutoML techniques on a dataset of over one million customers to forecast product adoption, new sales, and purchase counts, guiding targeted marketing strategies.
 
