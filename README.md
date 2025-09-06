@@ -25,7 +25,7 @@ Master of Science in Quantitative Economics
 
 **California State University, Northridge \| 2021 - 2023**<br>
 Bachelor of Arts in Economics
-- Overall GPA: 3.6
+- Overall GPA: 3.61
 
 ## Certificates and Awards
 **International Institute of Forecasters \| 2025**<br>
