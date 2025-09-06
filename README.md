@@ -16,7 +16,7 @@ CLU Center for Economic Research and Forecasting
 - Supported faculty-led economic forecasting by preparing datasets, generating charts, and improving data workflows for more efficient, accurate output.
 
 ## Education
-**California Lutheran University \| 2024-2025**<br>
+**California Lutheran University \| 2024 - 2025**<br>
 Master of Science in Quantitative Economics
 - Overall GPA: 3.72  | Concluding GPA: 4.0
 - Developed and implemented econometric models in EViews and R to forecast technology sector GDP, applying structural and time-series methods, error analysis, and combination forecasting to evaluate forecast performance and enhance forecast accuracy.
