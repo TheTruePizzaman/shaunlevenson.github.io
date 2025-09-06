@@ -50,7 +50,7 @@ For Exemplary Research in Economic Forecasting (California Lutheran University)
 
 ## Project Details
 **Capstone - Technology Sector GDP Forecast**
-This [project](projects/capstone/) models and forecasts the U.S. technology industry's production function and future GDP using econometric techniques, scenario analysis, and combination forecasting, integrating theory, data, and multiple predictive approaches to understand tech's impact on economic growth.
+This [project](projects/Capstone/) models and forecasts the U.S. technology industry's production function and future GDP using econometric techniques, scenario analysis, and combination forecasting, integrating theory, data, and multiple predictive approaches to understand tech's impact on economic growth.
 
 **Policy Brief - California Environmental Policy**
 This project compares California’s main climate policy instruments—Renewable Portfolio Standard (RPS), Low Carbon Fuel Standard (LCFS), and Cap-and-Trade—using criteria of unit effectiveness, cost, efficiency, and equity, providing policy recommendations for fairer, more effective emissions reductions.
