@@ -1,0 +1,768 @@
+---
+title: "Final Project"
+author: "Shaun Levenson"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    self_contained: true
+    code_folding: hide
+---
+
+**Packages**
+```{r packages, echo=TRUE, message=FALSE, warning=FALSE}
+options(timeout = 300)
+options(java.parameters = "-Xmx8g")
+# Install the required packages only if missing and suppress redundant output
+packages <- c("h2o","readr","kableExtra","dplyr","ggplot2","knitr","tidyverse","scales","gridExtra","patchwork","e1071","mlbench","tidymodels")
+new_packages <- setdiff(packages, rownames(installed.packages()))
+if (length(new_packages) > 0) install.packages(new_packages, quietly = TRUE)
+
+# Load the required packages quietly
+invisible(lapply(packages, function(pkg) suppressPackageStartupMessages(library(pkg, character.only = TRUE))))
+
+invisible(capture.output(h2o.init()))
+
+cat("Packages used:", packages, "\n")
+```
+
+```{r data, echo=TRUE}
+load("F:/ECON/562_Analytics_2/Final Project/bank.Rda")
+
+# Remove the columns that are not needed for the analysis
+bank$account <- NULL
+bank$dataset <- NULL
+bank$demog_genm <- NULL
+
+# Set cat_input1, cat_input2, and demog_genf as factors
+bank[] <- lapply(bank, function(x) if(is.character(x)) as.factor(x) else x)
+```
+
+# Missing Values, Outliers, and Data Cleaning
+
+```{r missing, echo=TRUE}
+# Check for missing values in the dataset
+missing_values <- sapply(bank, function(x) sum(is.na(x)))
+missing_percentage <- sapply(bank, function(x) sum(is.na(x)) / length(x) * 100)
+missing_summary <- data.frame(
+  Variable = names(missing_values),
+  Missing_Values = missing_values,
+  Missing_Percentage = round(missing_percentage, 2)
+)
+
+# remove rows with 0 missing values
+missing_summary <- missing_summary[missing_summary$Missing_Values > 0, ]
+# Sort the summary by missing values
+missing_summary <- missing_summary[order(-missing_summary$Missing_Values), ]
+
+# remove row names
+rownames(missing_summary) <- NULL
+
+# Display the missing values summary in kable
+kable(missing_summary, caption = "Missing Values Summary") %>%
+  kable_styling(full_width = FALSE, position = "left") %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, color = "blue") %>%
+  column_spec(3, color = "red")
+
+```
+
+```{r missing_removal, echo=TRUE}
+# Impute int_tgt missing values with 0
+bank$int_tgt[is.na(bank$int_tgt)] <- 0
+
+# Remove rows with missing values for demog_age and rfm3
+bank <- bank[!is.na(bank$demog_age) & !is.na(bank$rfm3), ]
+
+# Remove rows with missing values for cnt_tgt
+bank <- bank[!is.na(bank$cnt_tgt), ]
+
+```
+
+There are 4 variables with missing values in the dataset. The variables are `int_tgt`, `demog_age`, `rfm3`, and `cnt_tgt`. The percentage of missing values is also shown in the table.
+
+**Missing Removal Reasoning**
+- `int_tgt`: This variable is only set to `NA` when the customer is did not purchase a product (aka when b_tgt is set = 0). We can impute this with `0` to indicate that they did not spend any money on purchasing a product.
+
+  - Additionally, only a small percentage of the data for `int_tgt` is set to 0, so we can impute the missing values with `0` without losing too much information.
+  
+  - For `demog_age` and `rfm3`, I decided to exclude any observation with missing values. This is because the client is looking for a highly interpretable model, and I believe that using imputation methods will harm the model's interpretability.
+  
+ - same for `cnt_tgt` as well because there was only a single observation with a missing value.
+
+As for `demog_age`, I decided to remove any observations with an age of less than 16. This is because the client is a financial institution and including customers under the age of 16 will not be useful for the analysis due to legal reasons.  Additionally, individuals under 16 years old typically do not have financial authority or independence, making them less relevant for the analysis.
+```{r skewness, echo=TRUE}
+# Numerical variable names
+numerical_vars <- c("int_tgt", "cnt_tgt", "rfm1", "rfm2", "rfm3", "rfm4", 
+                    "rfm5", "rfm6", "rfm7", "rfm8", "rfm9", "rfm10", 
+                    "rfm11", "rfm12", "demog_age", "demog_homeval", 
+                    "demog_inc", "demog_pr")
+
+# Remove rows with age less than 16
+bank <- bank[bank$demog_age >= 16, ]
+
+# Function to compute summary statistics
+compute_summary_statistics <- function(bank, numerical_vars) {
+  summary_stats <- bank %>%
+    dplyr::select(dplyr::all_of(numerical_vars)) %>%
+    dplyr::summarise(dplyr::across(
+      everything(),
+      list(
+        mean = ~mean(., na.rm = TRUE),
+        sd = ~sd(., na.rm = TRUE),
+        median = ~median(., na.rm = TRUE),
+        min = ~min(., na.rm = TRUE),
+        max = ~max(., na.rm = TRUE),
+        skewness = ~e1071::skewness(., na.rm = TRUE)
+      ),
+      .names = "{col}_{fn}"
+    )) %>%
+    tidyr::pivot_longer(cols = everything(), 
+                        names_to = c("Variable", "Statistic"), 
+                        names_pattern = "(.*)_(.*)", 
+                        values_to = "Value") %>%
+    tidyr::pivot_wider(names_from = Statistic, values_from = Value) %>%
+    dplyr::mutate(dplyr::across(where(is.numeric), ~round(.x, 2)))
+  
+  return(summary_stats)
+}
+
+# Run the function
+summary_statistics <- compute_summary_statistics(bank, numerical_vars)
+
+# Display nicely formatted HTML table
+summary_statistics %>%
+  kable("html", caption = "Summary Statistics for Selected Numerical Variables") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "500px")
+```
+```{r categorical, echo=TRUE}
+# List of categorical variable names
+categorical_vars <- c("b_tgt", "cat_input1", "cat_input2", "demog_ho", "demog_genf")
+
+# Function to compute frequency tables
+compute_frequency_tables <- function(bank, categorical_vars) {
+  freq_tables <- lapply(categorical_vars, function(var) {
+    bank %>%
+      dplyr::select(dplyr::all_of(var)) %>%
+      dplyr::filter(!is.na(.data[[var]])) %>%
+      dplyr::group_by(.data[[var]]) %>%
+      dplyr::summarise(Count = n(), .groups = "drop") %>%
+      dplyr::mutate(
+        Level = as.character(.data[[var]]),  # Force Level to be character
+        Percent = round(100 * Count / sum(Count), 2),
+        Variable = var
+      ) %>%
+      dplyr::select(Variable, Level, Count, Percent)
+  })
+  
+  # Bind all tables into one
+  freq_tables_df <- dplyr::bind_rows(freq_tables)
+  
+  return(freq_tables_df)
+}
+
+# Run the function
+frequency_tables <- compute_frequency_tables(bank, categorical_vars)
+
+# Display nicely formatted HTML table
+frequency_tables %>%
+  kable("html", caption = "Frequency Tables for Selected Categorical Variables") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "500px")
+```
+
+```{r transformations, echo=TRUE}
+# transform int_tgt, rfm1, rfm2, rfm3, rfm4, rfm10 using log(x+1) transformation, have the new variables named log_(x)
+bank$log_int_tgt <- log(bank$int_tgt + 1)
+bank$log_rfm1 <- log(bank$rfm1 + 1)
+bank$log_rfm2 <- log(bank$rfm2 + 1)
+bank$log_rfm3 <- log(bank$rfm3 + 1)
+bank$log_rfm4 <- log(bank$rfm4 + 1)
+bank$log_rfm10 <- log(bank$rfm10 + 1)
+
+# Create a new summary statistic data frame with the transformed variables
+transformed_vars <- c("log_int_tgt", "log_rfm1", "log_rfm2", "log_rfm3", "log_rfm4", "log_rfm10")
+transformed_summary_statistics <- compute_summary_statistics(bank, transformed_vars)
+# Display the summary statistics for transformed variables
+transformed_summary_statistics %>%
+  kable("html", caption = "Summary Statistics for Transformed Variables") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "500px")
+```
+
+**Transformation Reasoning**
+- For each variable that was highly skewed, I applied a log transformation to reduce the skewness and make the distribution more normal. This is important for many machine learning algorithms that assume normally distributed data.  
+
+- Additionally, using a log transformation allows for more interpretable coefficients in the models, as they can be interpreted as percentage changes.
+
+```{r before and after, echo=TRUE}
+vars <- c("int_tgt", "rfm1", "rfm2", "rfm3", "rfm4", "rfm10")
+
+plot_list <- list()
+
+for (v in vars) {
+  p1 <- ggplot(bank, aes_string(x = v)) +
+    geom_histogram(bins = 30, fill = "skyblue", color = "black") +
+    labs(title = paste("Original", v), x = v, y = "Count") +
+    theme_minimal()
+  
+  log_var <- paste0("log_", v)
+  p2 <- ggplot(bank, aes_string(x = log_var)) +
+    geom_histogram(bins = 30, fill = "salmon", color = "black") +
+    labs(title = paste("Log-transformed", log_var), x = log_var, y = "Count") +
+    theme_minimal()
+  
+  # Combine plots side by side
+  plot_list[[v]] <- gridExtra::grid.arrange(p1, p2, ncol = 2)
+}
+
+# To display all plots, just run this:
+# This will print each pair of plots one after another
+for (p in plot_list) {
+  print(p)
+}
+```
+
+# Interactions
+
+```{r interactions, echo=TRUE}
+# Create interaction terms
+# Income and home value
+bank$demog_inc_homeval <- bank$demog_inc * bank$demog_homeval
+
+# Age and home value
+bank$demog_age_homeval <- bank$demog_age * bank$demog_homeval
+
+# Age and income
+bank$demog_age_inc <- bank$demog_age * bank$demog_inc
+
+
+```
+
+# Modelling by Target Variable
+
+- `int_tgt`
+
+```{r data_split, echo=TRUE}
+options(h2o.max_mem_size = "8G")
+#Import the dataset
+bank_h2o <- as.h2o(bank)
+options(timeout = 300)
+# Split the data into training, validation, and test sets
+splits <- h2o.splitFrame(data = bank_h2o, ratios = c(0.6, 0.2), seed = 123)
+train <- splits[[1]]
+valid <- splits[[2]]
+test <- splits[[3]]
+```
+
+```{r int_tgt, echo=TRUE}
+# Set the response variable
+response <- "log_int_tgt"
+
+# Set the predictor variables
+predictors_int <- c(
+  "cat_input1", "cat_input2",
+  "log_rfm1", "log_rfm2", "log_rfm3", "log_rfm4", "rfm5", "rfm6",
+  "rfm7", "rfm8", "rfm9", "log_rfm10", "rfm11", "rfm12",
+  "demog_age", "demog_genf", "demog_ho",
+  "demog_homeval", "demog_inc", "demog_pr","demog_inc_homeval",
+  "demog_age_homeval", "demog_age_inc"
+)
+```
+
+```{r h2o_auto_int, echo=TRUE}
+# Run AutoML with leaderboard on validation frame
+automl <- h2o.automl(
+  x = predictors_int,
+  y = "log_int_tgt",
+  training_frame = train,
+  validation_frame = valid,
+  leaderboard_frame = valid,
+  max_runtime_secs = 300,
+  seed = 123,
+  stopping_rounds = 5,
+  stopping_metric = "RMSE",
+  nfolds = 0
+)
+
+# Convert leaderboard to data frame and get model types
+leaderboard_df <- as.data.frame(automl@leaderboard)
+leaderboard_df$model_id <- as.character(leaderboard_df$model_id)
+leaderboard_df$model_type <- sapply(leaderboard_df$model_id, function(id) {
+  model <- h2o.getModel(id)
+  model@algorithm
+})
+
+# Keep only the top 4 unique model types
+leaderboard_unique <- leaderboard_df %>%
+  distinct(model_type, .keep_all = TRUE) %>%
+  slice(1:4)  # just in case fewer than 4
+
+# Get model IDs and types for unique models
+top_models <- leaderboard_unique$model_id
+top_types <- leaderboard_unique$model_type
+
+# Extract models
+models <- lapply(top_models, h2o.getModel)
+
+# --- VALIDATION METRICS (Leaderboard frame) ---
+valid_perfs <- lapply(models, function(model) h2o.performance(model, newdata = valid))
+valid_rmses <- sapply(valid_perfs, h2o.rmse)
+valid_mses <- sapply(valid_perfs, h2o.mse)
+valid_r2s <- sapply(valid_perfs, h2o.r2)
+
+# Convert logged RMSE to unlogged scale
+valid_unlogged_rmses <- sqrt(exp(valid_rmses^2) - 1)
+
+validation_summary <- data.frame(
+  Model = paste("Model", 1:length(top_models)),
+  Type = top_types,
+  RMSE = round(valid_rmses, 4),
+  MSE = round(valid_mses, 4),
+  Unlogged_RMSE = round(valid_unlogged_rmses, 2),
+  R2 = round(valid_r2s, 4)
+)
+
+# Display validation summary table
+kable(validation_summary, caption = "Validation Metrics: Top 4 Unique Model Types") %>%
+  kable_styling(full_width = FALSE, position = "left") %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, color = "purple") %>%
+  column_spec(3, color = "blue") %>%
+  column_spec(4, color = "red") %>%
+  column_spec(5, color = "darkgreen")
+
+# --- TEST METRICS (Only for the top model on leaderboard) ---
+final_model <- models[[1]]  # best model based on validation leaderboard
+
+test_perf <- h2o.performance(final_model, newdata = test)
+test_rmse <- h2o.rmse(test_perf)
+test_mse <- h2o.mse(test_perf)
+test_r2 <- h2o.r2(test_perf)
+test_unlogged_rmse <- sqrt(exp(test_rmse^2) - 1)
+
+test_summary <- data.frame(
+  Model = "Final Model (Model 1)",
+  Type = final_model@algorithm,
+  RMSE = round(test_rmse, 4),
+  MSE = round(test_mse, 4),
+  Unlogged_RMSE = round(test_unlogged_rmse, 2),
+  R2 = round(test_r2, 4)
+)
+
+# Display test summary table
+kable(test_summary, caption = "Test Metrics: Final Selected Model") %>%
+  kable_styling(full_width = FALSE, position = "left") %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, color = "purple") %>%
+  column_spec(3, color = "blue") %>%
+  column_spec(4, color = "red") %>%
+  column_spec(5, color = "darkgreen")
+
+```
+
+```{r int_tgt_plot, echo=TRUE}
+# Variable importance for the final best model (models[[1]])
+varimp_df <- as.data.frame(h2o.varimp(models[[1]]))
+
+ggplot(varimp_df[1:20, ], aes(x = reorder(variable, -relative_importance), y = relative_importance)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Top 20 Variable Importances (Final Best Model)",
+       x = "Variable",
+       y = "Relative Importance") +
+  theme_minimal()
+
+# Predictions on test set with final best model
+best_model <- models[[1]]
+predictions <- h2o.predict(best_model, newdata = test)
+predictions_df <- as.data.frame(predictions)
+
+# Actual values (log-transformed) from test set
+actuals_log <- as.data.frame(test[["log_int_tgt"]])
+actuals <- exp(actuals_log[[1]])  # back-transform
+
+# Predicted values back-transformed
+predicted <- exp(predictions_df[[1]])
+
+# Actual vs Predicted dataframe
+pred_vs_actual_df <- data.frame(
+  Actual = actuals,
+  Predicted = predicted
+)
+
+ggplot(pred_vs_actual_df, aes(x = Actual, y = Predicted)) +
+  geom_point(color = "blue") +
+  geom_abline(slope = 1, intercept = 0, color = "red") +  # perfect prediction line
+  labs(title = "Predicted vs Actual Values (Final Best Model)",
+       x = "Actual Values",
+       y = "Predicted Values") +
+  theme_minimal() +
+  theme(text = element_text(size = 12))
+
+# GLM coefficient table only if the 4th model is a GLM
+model_4 <- models[[4]]  # 4th model from the unique top 4 list
+if (model_4@algorithm == "glm") {
+  coef_table <- model_4@model$coefficients_table
+  coef_df <- coef_table[, c("names", "coefficients")]
+  coef_df$Odds_Ratio_Percent <- round((exp(coef_df$coefficients) - 1) * 100, 2)
+  colnames(coef_df) <- c("Predictor", "Coefficient", "Odds Ratio (%)")
+  
+  kable(coef_df, caption = "GLM Coefficients and Odds Ratios (%) for 4th Model") %>%
+    kable_styling(full_width = FALSE, position = "left") %>%
+    column_spec(1, bold = TRUE) %>%
+    column_spec(2, color = "blue") %>%
+    column_spec(3, color = "red")
+  
+} else {
+  cat("The 4th model is not a GLM. It is a", model_4@algorithm, "model.\n")
+}
+```
+
+- `b_tgt`
+   
+```{r b_tgt, echo=TRUE}
+# Set the response variable
+response_b <- "b_tgt"
+
+# Set the predictor variables
+predictors_b <- c(
+  "cat_input1", "cat_input2",
+  "log_rfm1", "log_rfm2", "log_rfm3", "log_rfm4", "rfm5", "rfm6",
+  "rfm7", "rfm8", "rfm9", "log_rfm10", "rfm11", "rfm12",
+  "demog_age", "demog_genf", "demog_ho",
+  "demog_homeval", "demog_inc", "demog_pr","demog_inc_homeval",
+  "demog_age_homeval", "demog_age_inc"
+)
+```
+
+```{r h2o_auto_b, echo=TRUE}
+# Run AutoML with validation leaderboard frame
+automl_b <- h2o.automl(
+  x = predictors_b,
+  y = response_b,
+  training_frame = train,
+  validation_frame = valid,
+  leaderboard_frame = valid,  # validation used for leaderboard
+  max_runtime_secs = 300,
+  seed = 123,
+  stopping_rounds = 5,
+  stopping_metric = "AUC",
+  nfolds = 0
+)
+
+# Convert leaderboard to data frame and get model types
+leaderboard_df_b <- as.data.frame(automl_b@leaderboard)
+leaderboard_df_b$model_id <- as.character(leaderboard_df_b$model_id)
+leaderboard_df_b$model_type <- sapply(leaderboard_df_b$model_id, function(id) {
+  model <- h2o.getModel(id)
+  model@algorithm
+})
+
+# Keep only the top 4 unique model types (from validation leaderboard)
+leaderboard_unique_b <- leaderboard_df_b %>%
+  distinct(model_type, .keep_all = TRUE) %>%
+  slice(1:4)
+
+top_models_b <- leaderboard_unique_b$model_id
+top_types_b <- leaderboard_unique_b$model_type
+
+# Extract the top 4 models
+models_b <- lapply(top_models_b, h2o.getModel)
+
+# Validation AUC for top 4 models (from leaderboard)
+validation_performances_b <- lapply(models_b, function(model) h2o.performance(model, newdata = valid))
+validation_auc_b <- sapply(validation_performances_b, h2o.auc)
+
+# Build validation summary table
+validation_summary_b <- data.frame(
+  Model = paste("Model", 1:length(top_models_b)),
+  Type = top_types_b,
+  Validation_AUC = round(validation_auc_b, 4)
+)
+
+# Display validation summary table
+kable(validation_summary_b, caption = "Top 4 Unique Model Types: Validation Performance Summary for b_tgt") %>%
+  kable_styling(full_width = FALSE, position = "left") %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, color = "purple") %>%
+  column_spec(3, color = "blue")
+
+# Now evaluate the best model (models_b[[1]]) on the test set for final performance
+test_performance_b <- h2o.performance(models_b[[1]], newdata = test)
+test_auc_b <- h2o.auc(test_performance_b)
+
+# Build test summary table for final chosen model
+test_summary_b <- data.frame(
+  Model = "Best Model (Model 1)",
+  Type = top_types_b[1],
+  Test_AUC = round(test_auc_b, 4)
+)
+
+# Display test performance summary
+kable(test_summary_b, caption = "Final Best Model Test Performance for b_tgt") %>%
+  kable_styling(full_width = FALSE, position = "left") %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, color = "purple") %>%
+  column_spec(3, color = "blue")
+
+# Save the final best model
+h2o.saveModel(models_b[[1]], path = "F:/ECON/562_Analytics_2/Final Project/models/model_1_b_tgt", force = TRUE)
+
+```
+
+```{r b_tgt_plot, echo=TRUE}
+# === Variable Importance for Best Model ===
+varimp_df_b <- as.data.frame(h2o.varimp(models_b[[1]]))
+
+# Plot Top 20 Variable Importances
+ggplot(varimp_df_b[1:20, ], aes(x = reorder(variable, -relative_importance), y = relative_importance)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = paste("Top 20 Variable Importances (", top_types_b[1], ")", sep = ""),
+       x = "Variable",
+       y = "Relative Importance") +
+  theme_minimal()
+
+# === ROC / AUC Curves for Best Model ===
+perf_train <- h2o.performance(models_b[[1]], newdata = train)
+perf_valid <- h2o.performance(models_b[[1]], newdata = valid)
+perf_test  <- h2o.performance(models_b[[1]], newdata = test)
+
+# Extract TPR and FPR
+roc_train <- as.data.frame(h2o.tpr(perf_train))
+roc_train$fpr <- as.data.frame(h2o.fpr(perf_train))$fpr
+
+roc_valid <- as.data.frame(h2o.tpr(perf_valid))
+roc_valid$fpr <- as.data.frame(h2o.fpr(perf_valid))$fpr
+
+roc_test <- as.data.frame(h2o.tpr(perf_test))
+roc_test$fpr <- as.data.frame(h2o.fpr(perf_test))$fpr
+
+# Plot
+plot(roc_train$fpr, roc_train$tpr, type = "l", col = "green", lwd = 2,
+     xlab = "False Positive Rate", ylab = "True Positive Rate",
+     main = "ROC Curves for Best Model")
+lines(roc_valid$fpr, roc_valid$tpr, col = "blue", lwd = 2)
+lines(roc_test$fpr, roc_test$tpr, col = "red", lwd = 2)
+abline(a = 0, b = 1, lty = 2, col = "gray")  # Diagonal reference
+
+# Add legend
+legend("bottomright", legend = c("Train", "Validation", "Test"),
+       col = c("green", "blue", "red"), lwd = 2, bty = "n")
+
+# === GLM Coefficient Table (4th Model) ===
+model_4 <- h2o.getModel(top_models_b[4])
+
+if (model_4@algorithm == "glm") {
+  coef_table <- model_4@model$coefficients_table
+  
+  coef_df <- coef_table[, c("names", "coefficients")]
+  coef_df$`Odds Ratio (%)` <- round((exp(coef_df$coefficients) - 1) * 100, 2)
+  
+  colnames(coef_df) <- c("Predictor", "Coefficient", "Odds Ratio (%)")
+  
+  kable(coef_df, caption = "GLM Coefficients and Odds Ratios (%)") %>%
+    kable_styling(full_width = FALSE, position = "left") %>%
+    column_spec(1, bold = TRUE) %>%
+    column_spec(2, color = "blue") %>%
+    column_spec(3, color = "red")
+} else {
+  cat("The 4th model is not a GLM. It is a", model_4@algorithm, "model.\n")
+}
+```
+
+```{r confusion_matrix, echo=TRUE}
+# Get the best model (first in the list)
+best_model <- models_b[[1]]
+best_model_type <- top_types_b[1]
+
+# Generate confusion matrix on test set
+best_model_test_cm <- as.data.frame(h2o.confusionMatrix(best_model, newdata = test))
+
+# Display as a styled table
+library(knitr)
+library(kableExtra)
+
+kable(best_model_test_cm, caption = paste("Confusion Matrix on Test Set -", best_model_type, "(Best Model)")) %>%
+  kable_styling(full_width = FALSE, position = "left") %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, color = "red") %>%
+  column_spec(3, color = "green") %>%
+  column_spec(4, color = "blue") %>%
+  row_spec(0, bold = TRUE, background = "#f2f2f2")
+
+```
+
+- `cnt_tgt`
+   
+```{r cnt_tgt, echo=TRUE}
+# Set the response variable
+response_cnt <- "cnt_tgt"
+
+# Set the predictor variables
+predictors_cnt <- c(
+  "cat_input1", "cat_input2",
+  "log_rfm1", "log_rfm2", "log_rfm3", "log_rfm4", "rfm5", "rfm6",
+  "rfm7", "rfm8", "rfm9", "log_rfm10", "rfm11", "rfm12",
+  "demog_age", "demog_genf", "demog_ho",
+  "demog_homeval", "demog_inc", "demog_pr","demog_inc_homeval",
+  "demog_age_homeval", "demog_age_inc"
+)
+
+```
+
+```{r h2o_auto_cnt, echo=TRUE}
+# Run AutoML for count target (Poisson regression setup)
+automl_cnt <- h2o.automl(
+  x = predictors_cnt,
+  y = response_cnt,
+  training_frame = train,
+  validation_frame = valid,
+  leaderboard_frame = valid,  # validation used for leaderboard
+  max_runtime_secs = 300,
+  seed = 123,
+  stopping_rounds = 5,
+  stopping_metric = "RMSE",
+  nfolds = 0
+)
+
+# Convert leaderboard to data frame and get model types
+leaderboard_df_cnt <- as.data.frame(automl_cnt@leaderboard)
+leaderboard_df_cnt$model_id <- as.character(leaderboard_df_cnt$model_id)
+leaderboard_df_cnt$model_type <- sapply(leaderboard_df_cnt$model_id, function(id) {
+  model <- h2o.getModel(id)
+  model@algorithm
+})
+
+# Keep only the top 4 unique model types
+leaderboard_unique_cnt <- leaderboard_df_cnt %>%
+  distinct(model_type, .keep_all = TRUE) %>%
+  slice(1:4)
+
+# Get model IDs and types
+top_models_cnt <- leaderboard_unique_cnt$model_id
+top_types_cnt <- leaderboard_unique_cnt$model_type
+
+# Extract top models
+models_cnt <- lapply(top_models_cnt, h2o.getModel)
+
+# Evaluate on validation (already used in leaderboard)
+performances_cnt_valid <- lapply(models_cnt, function(model) h2o.performance(model, newdata = valid))
+rmses_cnt_valid <- sapply(performances_cnt_valid, h2o.rmse)
+mses_cnt_valid <- sapply(performances_cnt_valid, h2o.mse)
+
+# Build validation summary table
+summary_table_cnt <- data.frame(
+  Model = paste("Model", 1:length(top_models_cnt)),
+  Type = top_types_cnt,
+  RMSE = round(rmses_cnt_valid, 4),
+  MSE = round(mses_cnt_valid, 4)
+)
+
+# Display summary table for validation set
+kable(summary_table_cnt, caption = "Top 4 Unique Model Types: Validation Performance Summary for cnt_tgt") %>%
+  kable_styling(full_width = FALSE, position = "left") %>%
+  column_spec(1, bold = TRUE) %>%
+  column_spec(2, color = "purple") %>%
+  column_spec(3, color = "blue") %>%
+  column_spec(4, color = "red")
+
+# Evaluate only the best model on the test set
+best_model_cnt <- models_cnt[[1]]
+perf_test_cnt <- h2o.performance(best_model_cnt, newdata = test)
+rmse_test_cnt <- h2o.rmse(perf_test_cnt)
+mse_test_cnt <- h2o.mse(perf_test_cnt)
+
+# Display separate table for best model test performance
+data.frame(
+  Model = "Best Model (Test Set)",
+  Type = top_types_cnt[1],
+  RMSE = round(rmse_test_cnt, 4),
+  MSE = round(mse_test_cnt, 4)
+) %>%
+  kable(caption = "Best Model Performance on Test Set (cnt_tgt)") %>%
+  kable_styling(full_width = FALSE, position = "left") %>%
+  column_spec(1, bold = TRUE, color = "darkgreen") %>%
+  column_spec(2, color = "purple") %>%
+  column_spec(3, color = "blue") %>%
+  column_spec(4, color = "red")
+
+# Save the best model
+h2o.saveModel(best_model_cnt, path = "F:/ECON/562_Analytics_2/Final Project/models/model_1_cnt_tgt", force = TRUE)
+
+```
+
+```{r cnt_tgt_plot, echo=TRUE}
+# Get variable importance for the best model
+varimp_df_cnt <- as.data.frame(h2o.varimp(best_model_cnt))
+
+# Plot top 20 variable importances using ggplot2
+ggplot(varimp_df_cnt[1:20, ], aes(x = reorder(variable, -relative_importance), y = relative_importance)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Top 20 Variable Importances (Best Model - cnt_tgt)",
+       x = "Variable",
+       y = "Relative Importance") +
+  theme_minimal()
+
+# Predicted vs Actual plot for the best model
+predicted_cnt <- h2o.predict(best_model_cnt, newdata = test)
+predicted_cnt_df <- as.data.frame(predicted_cnt)
+predicted_cnt_df$actual <- as.data.frame(test)$cnt_tgt
+predicted_cnt_df$actual <- as.numeric(predicted_cnt_df$actual)
+predicted_cnt_df$predicted <- as.numeric(predicted_cnt_df$predict)
+
+ggplot(predicted_cnt_df, aes(x = actual, y = predicted)) +
+  geom_point(alpha = 0.5, color = "darkorange") +
+  geom_smooth(method = "lm", color = "blue") +
+  labs(title = "Predicted vs Actual for cnt_tgt (Best Model)",
+       x = "Actual cnt_tgt",
+       y = "Predicted cnt_tgt") +
+  theme_minimal()
+
+# Inspect GLM coefficients if the 4th model is GLM
+model_4_cnt <- h2o.getModel(top_models_cnt[4])
+if (model_4_cnt@algorithm == "glm") {
+  # Extract the full coefficient table
+  coef_table_cnt <- model_4_cnt@model$coefficients_table
+  
+  # Keep relevant columns and calculate odds ratio percentage
+  coef_df_cnt <- coef_table_cnt[, c("names", "coefficients")]
+  coef_df_cnt$Odds_Ratio_Percent <- round((exp(coef_df_cnt$coefficients) - 1) * 100, 2)
+  
+  # Rename columns for clarity
+  colnames(coef_df_cnt) <- c("Predictor", "Coefficient", "Odds Ratio (%)")
+  
+  # Display table
+  kable(coef_df_cnt, caption = "GLM Coefficients and Odds Ratios (%) for cnt_tgt") %>%
+    kable_styling(full_width = FALSE, position = "left") %>%
+    column_spec(1, bold = TRUE) %>%
+    column_spec(2, color = "blue") %>%
+    column_spec(3, color = "red")
+  
+} else {
+  cat("The 4th model is not a GLM. It is a", model_4_cnt@algorithm, "model.\n")
+}
+
+```
+
+```{r bplot, echo=TRUE}
+# create and display a barplot of b_tgt and include labels of the counts at the top of each bar
+b_tgt_counts <- table(bank$b_tgt)
+b_tgt_counts_df <- as.data.frame(b_tgt_counts)
+b_tgt_counts_df$Var1 <- as.character(b_tgt_counts_df$Var1)  # Convert to character for ggplot
+ggplot(b_tgt_counts_df, aes(x = Var1, y = Freq)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  geom_text(aes(label = Freq), vjust = -0.5, size = 4) +
+  labs(title = "Bar Plot of b_tgt Counts",
+       x = "b_tgt",
+       y = "Count") +
+  theme_minimal() +
+  theme(text = element_text(size = 12))
+
+
+```
+

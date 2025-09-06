@@ -1,0 +1,894 @@
+---
+title: "Final Project"
+author: "Shaun Levenson"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    self_contained: true
+    code_folding: hide
+---
+
+```{r packages, echo=TRUE}
+# Install the required packages only if missing and suppress redundant output
+packages <- c("tidyverse", "caret", "knitr", "kableExtra", "skimr", "ggplot2","dplyr","ISLR","tree","rpart","rpart.plot","randomForest","gbm","doParallel","naniar","patchwork","MASS","scales","plotly","reshape2","e1071","ggcorrplot","gt","nortest","gridExtra")
+new_packages <- setdiff(packages, rownames(installed.packages()))
+if (length(new_packages) > 0) install.packages(new_packages, quietly = TRUE)
+
+# Load the required packages quietly
+invisible(lapply(packages, function(pkg) suppressPackageStartupMessages(library(pkg, character.only = TRUE))))
+```
+
+# 1. Data Loading and Inspection
+
+```{r load data, echo=TRUE}
+#Import the dataset.  Change the file path to where you saved your bank.txt file
+bank <- read_csv("F:/ECON/562_Analytics_2/Final Project/bank.txt", 
+                 col_types = cols(b_tgt = col_character(), 
+                                  int_tgt = col_number(), cnt_tgt = col_double(), 
+                                  demog_homeval = col_number(), demog_inc = col_number(), 
+                                  rfm1 = col_number(), rfm2 = col_number(), 
+                                  rfm3 = col_number(), rfm4 = col_number(), 
+                                  demog_genf = col_character(), demog_genm = col_character(), 
+                                  dataset = col_character()))
+
+# Display the first 10 rows of the dataset
+bank %>% 
+  slice(1:10) %>% 
+  kable("html", caption = "First 10 Rows of the Bank Dataset") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                full_width = FALSE,
+                position = "center")
+
+str(bank)
+summary(bank)
+
+```
+
+## Data Understanding
+
+|Data Type | Description | Columns |
+|---------|------------|-------|
+|**Numeric** | Continuous variables or discrete numeric inputs. | 18 Columns:   `int_tgt`, `cnt_tgt`, `rfm1-12`, `demog_age`, `demog_homeval`, `demog_inc`, `demog_pr`|
+|**Factor** | Categorical with fixed levels | 6 Columns: `b_tgt`, `cat_input1`, `cat_input2`, `demog_ho`, `demog_genf`, `demog_genm` |
+|**Identifier** | Unique identifiers for each row | 1 Column: `account` |
+|**Partition** | Subset of the dataset | 1 Column: `dataset` |
+
+**Variable Descriptions**
+
+| Variable         | Type         | Description                                               |
+|------------------|--------------|-----------------------------------------------------------|
+| **Target Variables** |||
+| `B_TGT` | Binary | Tried a New Product (Yes/No — may be recoded as 1/0)|
+| `INT_TGT` | Numeric      | Total New Sales |
+|`CNT_TGT`| Count| Count of New Products Purchased |
+| **Categorical Predictors** |||
+| `CAT_INPUT1`| Categorical  | Account Activity|
+| `CAT_INPUT2`| Categorical  | Customer Value Level|
+| **RFM Interval Inputs** |||
+| `RFM1`| Numeric| Average Sales Past 3 Years|
+| `RFM2`| Numeric| Average Sales Lifetime|
+| `RFM3`| Numeric| Avg Sales Past 3 Years - Direct Promo Response|
+| `RFM4`| Numeric | Last Product Purchase Amount|
+| `RFM5`| Numeric| Count Purchased Past 3 Years|
+| `RFM6`| Numeric| Count Purchased Lifetime  |
+| `RFM7`| Numeric| Count Purchased Past 3 Years - Direct Promo Response|
+| `RFM8`| Numeric| Count Purchased Lifetime - Direct Promo Response|
+| `RFM9`| Numeric| Months Since Last Purchase|
+| `RFM10`| Numeric| Count Total Promos Past Year |
+| `RFM11`| Numeric| Count Direct Promos Past Year|
+| `RFM12`| Numeric| Customer Tenure|
+| **Demographic Inputs** |||
+| `DEMOG_AGE`| Numeric      | Customer Age   |
+| `DEMOG_GENF`| Binary       | Female (Yes/No)|
+| `DEMOG_GENM`| Binary       | Male (Yes/No)  |
+| `DEMOG_HO`| Binary       | Homeowner (Yes/No)|
+| `DEMOG_HOMEVAL`| Numeric      | Home Value|
+| `DEMOG_INC`| Numeric      | Income  |
+| `DEMOG_PR`| Numeric      | Geographical Retirement Percentage 
+
+**General Structure**
+
+- The dataset contains **1,060,038 rows** and **26 columns.**
+
+- The dataset is divided into three subsets: training (1), validation (2), and testing (3).
+
+- 3 target variables 
+  - **b_tgt**: Binary target variable indicating whether the customer tried a new product (yes/no).
+  - **int_tgt**: Numeric target variable indicating the total number of new sales.
+  - **cnt_tgt**: Count target variable indicating the total number of new products and services purchased by customers.
+  
+**Potential Issues**
+
+- Many missing values
+
+- Redundant Gender columns: do not need both male and female. Will only keep the female column.
+
+- Zero values in `demog_homeval`, `demog_inc`, and `demog_pr` columns. These values are suspicious and may be treated as missing values.
+
+# 2. Missing Values
+
+```{r missing values, echo=TRUE}
+# Missing Value Table
+bank %>%
+  miss_var_summary() %>%
+  mutate(pct_miss = round(pct_miss, 2)) %>%
+  kable("html", caption = "Missing Data Summary for 'bank' Dataset") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+                full_width = F,
+                position = "center")
+```
+
+**Important Note:**
+
+- The dataset contains a significant amount of missing values, particularly in the `int_tgt` variable, which has **80%** missing values. This is not a major concern due to the nature of the modelling focus. The `int_tgt` variable is set to N/A for any `b_tgt` that is "no" and since we will be modelling for how much a customer will spend given they have purchased a new product, we can effectively ignore all missing values for this variable.
+
+- The other two highly missing variables are `demog_age` and `rfm3`, which have **25.2%** and **21.3%** missing values, respectively. These variables will be imputed using the median or mean values depending on the normality due to the importance of these variables.
+
+# 3. Univariate Analysis
+
+```{r summary statistics, echo=TRUE}
+# Numerical variable names
+numerical_vars <- c("int_tgt", "cnt_tgt", "rfm1", "rfm2", "rfm3", "rfm4", 
+                    "rfm5", "rfm6", "rfm7", "rfm8", "rfm9", "rfm10", 
+                    "rfm11", "rfm12", "demog_age", "demog_homeval", 
+                    "demog_inc", "demog_pr")
+
+# Function to compute summary statistics
+compute_summary_statistics <- function(bank, numerical_vars) {
+  summary_stats <- bank %>%
+    dplyr::select(dplyr::all_of(numerical_vars)) %>%
+    dplyr::summarise(dplyr::across(
+      everything(),
+      list(
+        mean = ~mean(., na.rm = TRUE),
+        sd = ~sd(., na.rm = TRUE),
+        median = ~median(., na.rm = TRUE),
+        min = ~min(., na.rm = TRUE),
+        max = ~max(., na.rm = TRUE),
+        skewness = ~e1071::skewness(., na.rm = TRUE)
+      ),
+      .names = "{col}_{fn}"
+    )) %>%
+    tidyr::pivot_longer(cols = everything(), 
+                        names_to = c("Variable", "Statistic"), 
+                        names_pattern = "(.*)_(.*)", 
+                        values_to = "Value") %>%
+    tidyr::pivot_wider(names_from = Statistic, values_from = Value) %>%
+    dplyr::mutate(dplyr::across(where(is.numeric), ~round(.x, 2)))
+  
+  return(summary_stats)
+}
+
+# Run the function
+summary_statistics <- compute_summary_statistics(bank, numerical_vars)
+
+# Display nicely formatted HTML table
+summary_statistics %>%
+  kable("html", caption = "Summary Statistics for Selected Numerical Variables") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "500px")
+```
+
+
+```{r categorical variables_stats, echo=TRUE}
+# List of categorical variable names
+categorical_vars <- c("b_tgt", "cat_input1", "cat_input2", "demog_ho", "demog_genf")
+
+# Function to compute frequency tables
+compute_frequency_tables <- function(bank, categorical_vars) {
+  freq_tables <- lapply(categorical_vars, function(var) {
+    bank %>%
+      dplyr::select(dplyr::all_of(var)) %>%
+      dplyr::filter(!is.na(.data[[var]])) %>%
+      dplyr::group_by(.data[[var]]) %>%
+      dplyr::summarise(Count = n(), .groups = "drop") %>%
+      dplyr::mutate(
+        Level = as.character(.data[[var]]),  # Force Level to be character
+        Percent = round(100 * Count / sum(Count), 2),
+        Variable = var
+      ) %>%
+      dplyr::select(Variable, Level, Count, Percent)
+  })
+  
+  # Bind all tables into one
+  freq_tables_df <- dplyr::bind_rows(freq_tables)
+  
+  return(freq_tables_df)
+}
+
+# Run the function
+frequency_tables <- compute_frequency_tables(bank, categorical_vars)
+
+# Display nicely formatted HTML table
+frequency_tables %>%
+  kable("html", caption = "Frequency Tables for Selected Categorical Variables") %>%
+  kable_styling(full_width = TRUE, bootstrap_options = c("striped", "hover")) %>%
+  scroll_box(width = "100%", height = "500px")
+
+```
+
+
+```{r univariate analysis visualization, echo=TRUE, warning=FALSE, message=FALSE}
+# Define all numerical variables
+numerical_vars <- c("int_tgt", "cnt_tgt", paste0("rfm", 1:12),
+                    "demog_age", "demog_homeval", "demog_inc", "demog_pr")
+
+# Generate a vector of distinct colors
+colors <- hue_pal()(length(numerical_vars))
+
+# Create a list to store plots
+num_plots <- list()
+
+for (i in seq_along(numerical_vars)) {
+  var <- numerical_vars[i]
+  color <- colors[i]
+  
+  plot_data <- bank %>% filter(!is.na(.data[[var]]))
+  
+  p <- ggplot(plot_data, aes(x = .data[[var]])) +
+    geom_histogram(bins = 30, fill = color, color = "black") +
+    labs(title = paste("Distribution of", var), x = var, y = "Frequency") +
+    theme_minimal()
+  
+  num_plots[[i]] <- p
+}
+
+# Display in 2x2 grids
+num_chunks <- ceiling(length(num_plots) / 4)
+for (i in 1:num_chunks) {
+  idx <- ((i - 1) * 4 + 1):min(i * 4, length(num_plots))
+  grid.arrange(grobs = num_plots[idx], ncol = 2)
+}
+
+# Now do the same for categorical variables
+categorical_vars <- c("b_tgt", "cat_input1", "cat_input2", "demog_ho", "demog_genf", "demog_genm")
+cat_plots <- list()
+
+for (var in categorical_vars) {
+  p <- ggplot(bank, aes(x = .data[[var]])) +
+    geom_bar(fill = "#868686FF") +
+    labs(title = paste("Distribution of", var), x = var, y = "Count") +
+    theme_minimal()
+  
+  cat_plots[[length(cat_plots) + 1]] <- p
+}
+
+# Display in 2x2 grids
+cat_chunks <- ceiling(length(cat_plots) / 4)
+for (i in 1:cat_chunks) {
+  idx <- ((i - 1) * 4 + 1):min(i * 4, length(cat_plots))
+  grid.arrange(grobs = cat_plots[idx], ncol = 2)
+}
+```
+
+
+
+## Analysis
+
+The notable observations from these distributations for consideration:
+
+**`b_tgt`**:
+- This variable exhibits a significant imbalance, with a large number of "no" responses compared to "yes". This is common in marketing datasets where the target event (e.g., trying a new product) is rare.
+
+- Class imbalance could cause models to favor the majority class, reducing predictive accuracy for the minority class.  Addressing this is vital for effective model performance, especially in classification tasks.
+
+**`int_tgt`**:
+- This variable shows high skewness, indicating a right-skewed distribution. This suggests that most customers have low total new sales, with a few customers having very high sales.  This chart may also indicate the presence of outliers by the long right tail.  Previously, the summary statistic showed a max value of 500000, which is likely a significant outlier.  This will be properly addressed in the data cleaning section to return to a normal distribution as many regression models assume normality.
+
+- This histogram does not include the missing values, which are set to NA.  This is important to note as the missing values are not included in the analysis.
+
+**`cnt_tgt`**:
+- This variable also shows a right-skewed distribution, similar to `int_tgt`. This is due to most customers having 0 new products purchased, with a few customers having purchased multiple products. However, the summary statistics show that the skew of this variable is much lower than `int_tgt`, indicating that the distribution is more normal, yet still may benefit from transformations.
+
+# 4. Bivariate Analysis
+
+```{r correlation matrix, echo=TRUE}
+# Compute the correlation matrix for numeric columns in the bank dataset
+correlation_matrix <- cor(bank[, sapply(bank, is.numeric)], use = "complete.obs")
+
+# Melt the correlation matrix to long format
+melted_correlation <- melt(correlation_matrix)
+
+# Truncate the correlation values to the nearest hundredth
+melted_correlation$value <- trunc(melted_correlation$value * 100) / 100
+
+# Create a heatmap using ggplot2
+heatmap_plot <- ggplot(data = melted_correlation, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0) +
+  labs(title = "Correlation Heatmap of Numerical Variables",
+       x = "Variable",
+       y = "Variable") +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.title.x = element_text(size = 12, face = "bold"),
+    axis.title.y = element_text(size = 12, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1, size = 10),
+    axis.text.y = element_text(size = 10)
+  )
+
+# Convert to interactive plot
+interactive_heatmap <- ggplotly(heatmap_plot, tooltip = c("Var1", "Var2", "value"))
+
+# Show the heatmap
+interactive_heatmap
+```
+
+
+```{r correlations, echo=TRUE}
+# Compute correlation matrix
+cor_matrix <- cor(bank %>% select(where(is.numeric)), use = "complete.obs")
+
+# Melt to long format
+cor_long <- melt(cor_matrix)
+
+# Remove self-correlations and duplicate pairs
+cor_filtered <- cor_long %>%
+  filter(Var1 != Var2) %>%
+  rowwise() %>%
+  mutate(pair = paste(sort(c(Var1, Var2)), collapse = "_")) %>%
+  distinct(pair, .keep_all = TRUE) %>%
+  filter(abs(value) > 0.6) %>%
+  arrange(desc(abs(value)))
+
+# Create a nice table
+cor_table <- cor_filtered %>%
+  select(Variable1 = Var1, Variable2 = Var2, Correlation = value) %>%
+  mutate(Correlation = round(Correlation, 2)) %>%
+  kable("html", caption = "Strong Correlations (>|0.6|)", escape = FALSE) %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = FALSE)
+
+# Display
+cor_table
+```
+
+
+## Analysis
+
+| Correlation (Abs. Value) | Strength | Suggestion |
+|-------------------|------------------|------------------------------------| 
+| 0.0–0.3 | Weak | Usually not worth flagging | 
+| 0.3–0.5 | Moderate | Context-dependent | 
+| 0.5–0.7 | Strong-ish | Often worth a closer look |
+| 0.7–0.9+ | Very strong | Good candidates for multicollinearity check |
+
+- There is extremely high correlation across the RFM variables, especially `rfm1`, `rfm2`, and `rfm3`. 
+
+ - `rfm1` (Avg Sales past 3 yrs) is highly correlated with:
+
+  - `rfm2` (Avg Sales Lifetime): 0.91
+
+  - `rfm3` (Avg Sales Past 3 yrs Dir Promo Resp): 0.96
+
+This is expected as these variables are all related to average sales over different time periods.  
+ 
+- `rfm6` (Count Purchased Lifetime) and `rfm8` (Count Purchased Lifetime Dir Promo Resp): 0.89
+
+- `rfm5`(Count Purchased Past 3 Yrs) and `cnt_tgt` (Target variable): 0.79
+
+**Modelling Approach**
+
+### 1. Multicollinearity Warning
+
+- Extremely high correlations (e.g., > 0.9), like between `rfm1` and `rfm3`, can cause multicollinearity, which may:
+  - Distort the interpretation of coefficients in linear models  
+  - Inflate standard errors  
+
+- **Solution**: Consider removing one of each highly correlated pair (e.g., keep either `rfm1` or `rfm3`, not both), or use dimension reduction techniques such as:
+  - Principal Component Analysis (PCA)
+  - Regularization (e.g., Ridge, Lasso)
+
+### 2. Feature Selection
+
+- Strong correlation between some predictors (e.g., `rfm5`) and the target variable (`cnt_tgt`) suggests these may be strong predictors:
+  - These should be prioritized in model training or feature selection algorithms.
+
+### 3. Model Choice Consideration
+
+- Linear models are sensitive to multicollinearity, but tree-based models (like Random Forest or Gradient Boosting) are more robust in this context.
+  - For models where interpretability matters, handling multicollinearity is crucial.
+
+# 5. Data Quality and Outliers
+
+```{r log transformation, echo=TRUE}
+# Log transformation for skewed variables
+skewed_vars <- c("int_tgt", "cnt_tgt", "rfm1", "rfm2", "rfm3", "rfm4", "rfm10", "demog_homeval")
+
+bank[paste("log_", skewed_vars, sep = "")] <- lapply(bank[skewed_vars], function(x) {
+  if (any(x <= 0, na.rm = TRUE)) {
+    x[x <= 0] <- NA
+  }
+  log(x)
+})
+
+# Check the distribution of the transformed variables
+skewed_vars_transformed <- bank %>%
+  select(starts_with("log_")) %>%
+  gather(key = "Variable", value = "Value") %>%
+  filter(!is.na(Value))
+
+ggplot(skewed_vars_transformed, aes(x = Value)) +
+  geom_histogram(bins = 30, fill = "#868686FF", color = "black") +
+  facet_wrap(~ Variable, scales = "free") +
+  labs(title = "Distribution of Log-Transformed Variables", x = "Log Value", y = "Count") +
+  theme_minimal()
+
+
+```
+
+```{r outlier checks, echo=TRUE,warning=FALSE}
+# Function to generate boxplot and return both plot and outlier count
+outlier_check_plot <- function(data, var) {
+  # Generate boxplot
+  p <- ggplot(data, aes(y = .data[[var]])) +
+    geom_boxplot(fill = "#00AFBB", color = "black", outlier.color = "red", outlier.shape = 16) +
+    labs(title = paste("Boxplot of", var), y = var) +
+    theme_minimal()
+
+  # Identify outliers using 1.5*IQR rule
+  qnt <- quantile(data[[var]], probs = c(0.25, 0.75), na.rm = TRUE)
+  iqr <- qnt[2] - qnt[1]
+  lower <- qnt[1] - 1.5 * iqr
+  upper <- qnt[2] + 1.5 * iqr
+  outliers <- which(data[[var]] < lower | data[[var]] > upper)
+  
+  return(list(plot = p, count = length(outliers)))
+}
+
+# Define variables to check
+variables_to_check <- c(
+  "log_cnt_tgt", "log_demog_homeval", "log_int_tgt", "log_rfm1", "log_rfm10", 
+  "log_rfm2", "log_rfm3", "log_rfm4", "rfm5", "rfm6", "rfm7", "rfm8", 
+  "rfm9", "rfm11", "rfm12", "demog_age", "demog_inc", "demog_pr"
+)
+
+# Store results
+results <- lapply(variables_to_check, function(v) outlier_check_plot(bank, v))
+names(results) <- variables_to_check
+
+# Extract outlier counts and plots
+outlier_counts <- sapply(results, function(x) x$count)
+outlier_plots <- lapply(results, function(x) x$plot)
+
+# Print summary sorted by outlier count
+outlier_summary <- data.frame(Variable = names(outlier_counts), Outlier_Count = outlier_counts)
+outlier_summary <- outlier_summary %>% arrange(desc(Outlier_Count))
+print(outlier_summary)
+
+# Display boxplots in 2x2 grid layout
+plot_chunks <- ceiling(length(outlier_plots) / 4)
+for (i in 1:plot_chunks) {
+  idx <- ((i - 1) * 4 + 1):min(i * 4, length(outlier_plots))
+  grid.arrange(grobs = outlier_plots[idx], ncol = 2)
+}
+
+```
+
+
+
+### Impact of Outliers and Strategies for Handling Them
+
+Outliers can significantly affect the performance of predictive models. They can distort model parameters, increase variance, and reduce the ability of models to generalize well to unseen data. The strategies outlined below can help manage the influence of outliers:
+
+#### **Impact of Outliers**:
+- **Linear Models**: Can lead to biased coefficients and inflated standard errors.
+- **Distance-based Algorithms**: Outliers influence distance calculations, affecting models like KNN and SVM.
+- **Tree-based Models**: More robust but can still be affected by extreme values.
+
+#### **Strategies to Handle Outliers**:
+1. **Removing Outliers**:
+   - Use **IQR** or **Z-score** methods to remove extreme values.
+2. **Capping/Winsorization**:
+   - Limit extreme values to a certain percentile (e.g., 95th percentile).
+3. **Log Transformation**:
+   - Apply log or Box-Cox transformations to reduce the spread of data and make models less sensitive to outliers (already applied to `cnt_tgt`, `int_tgt`, etc.).
+4. **Robust Models**:
+   - Use **Ridge**, **Lasso**, or **Huber Regression** to reduce the impact of outliers on model training.
+5. **Quantile Regression**:
+   - Focus on specific quantiles (e.g., 50th percentile) to minimize the impact of outliers.
+6. **Outlier Detection**:
+   - Use algorithms like **Isolation Forest** to automatically identify and handle outliers.
+
+#### **Strategy for This Dataset**:
+- **Log Transform**: Continue using the log-transformed variables (e.g., `cnt_tgt`, `rfm1`, `rfm2`).
+- **Boxplots and IQR**: Identify extreme outliers in both transformed and non-transformed variables.
+- **Capping or Removal**: Cap or remove extreme outliers where appropriate (e.g., `cnt_tgt`).
+- **Robust Models**: Consider tree-based or regularized regression models to reduce the impact of outliers.
+
+# 6. Target Variable Analysis
+
+```{r target variable analysis, echo=TRUE, warning=FALSE}
+# indicate the target variables int_tgt, cnt_tgt, and b_tgt
+# Create a bar plot for b_tgt with count labels and plain y-axis
+b_tgt_plot <- ggplot(bank, aes(x = as.factor(b_tgt))) +
+  geom_bar(fill = "#00AFBB", color = "black") +
+  geom_text(stat = "count", aes(label = ..count..), vjust = -0.5, size = 4) +
+  scale_y_continuous(labels = scales::comma) +
+  labs(title = "Distribution of b_tgt", x = "b_tgt", y = "Count") +
+  theme_minimal()
+
+# Create histogram for int_tgt with colors and plain y-axis
+int_tgt_hist <- ggplot(bank, aes(x = int_tgt)) +
+  geom_histogram(bins = 30, fill = "#E7B800", color = "black") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(title = "Histogram of int_tgt", x = "int_tgt", y = "Frequency") +
+  theme_minimal()
+
+# Create histogram for cnt_tgt with colors and plain y-axis
+cnt_tgt_hist <- ggplot(bank, aes(x = cnt_tgt)) +
+  geom_histogram(bins = 30, fill = "#FC4E07", color = "black") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(title = "Histogram of cnt_tgt", x = "cnt_tgt", y = "Frequency") +
+  theme_minimal()
+
+# Create a list to store plots
+plots <- list()
+
+plots$b_tgt_plot <- b_tgt_plot
+plots$int_tgt_hist <- int_tgt_hist
+plots$cnt_tgt_hist <- cnt_tgt_hist
+
+# Display the plots
+plots$b_tgt_plot
+plots$int_tgt_hist
+plots$cnt_tgt_hist
+```
+
+```{r tgt_stats, echo=TRUE}
+# Load gt
+library(gt)
+
+# Define target variables
+tgt_vars <- c("int_tgt", "cnt_tgt")
+
+# Function to compute summary statistics
+compute_summary_statistics <- function(bank, target_vars) {
+  summary_stats <- bank %>%
+    dplyr::select(dplyr::all_of(target_vars)) %>%
+    dplyr::summarise(dplyr::across(
+      everything(),
+      list(
+        mean = ~mean(., na.rm = TRUE),
+        sd = ~sd(., na.rm = TRUE),
+        median = ~median(., na.rm = TRUE),
+        min = ~min(., na.rm = TRUE),
+        max = ~max(., na.rm = TRUE),
+        skewness = ~e1071::skewness(., na.rm = TRUE)
+      ),
+      .names = "{col}_{fn}"
+    )) %>%
+    tidyr::pivot_longer(cols = everything(), 
+                        names_to = c("Variable", "Statistic"), 
+                        names_pattern = "(.*)_(.*)", 
+                        values_to = "Value") %>%
+    tidyr::pivot_wider(names_from = Statistic, values_from = Value) %>%
+    dplyr::mutate(dplyr::across(where(is.numeric), ~round(.x, 2)))
+  
+  return(summary_stats)
+}
+
+# Run the function for target variables
+summary_statistics_tgt <- compute_summary_statistics(bank, tgt_vars)
+
+# Create a beautiful gt table
+summary_statistics_tgt %>%
+  gt() %>%
+  fmt_number(
+    columns = where(is.numeric),
+    decimals = 2,          # Keep 2 decimal places
+    use_seps = TRUE        # Add commas (thousand separators)
+  ) %>%
+  tab_header(
+    title = "Summary Statistics for Target Variables"
+  ) %>%
+  tab_options(
+    table.width = pct(100),
+    table.font.size = 14,
+    heading.align = "center",
+    data_row.padding = px(6)
+  )
+```
+
+```{r b_tgt_stats, echo=TRUE}
+# Function to compute summary statistics for a binary variable
+compute_binary_summary <- function(data, binary_var) {
+  binary_data <- data[[binary_var]]
+  
+  # Remove missing values
+  binary_data <- binary_data[!is.na(binary_data)]
+  
+  total_n <- length(binary_data)
+  n_ones <- sum(binary_data == 1)
+  n_zeros <- sum(binary_data == 0)
+  prop_ones <- round(n_ones / total_n, 2)
+  prop_zeros <- round(n_zeros / total_n, 2)
+  mode_val <- ifelse(n_ones >= n_zeros, 1, 0)
+  
+  summary_df <- data.frame(
+    Variable = binary_var,
+    Count = total_n,
+    Count_1s = n_ones,
+    Count_0s = n_zeros,
+    Proportion_1s = prop_ones,
+    Proportion_0s = prop_zeros,
+    Mode = mode_val
+  )
+  
+  return(summary_df)
+}
+
+# Run for binary variable b_tgt
+binary_summary <- compute_binary_summary(bank, "b_tgt")
+
+# Display nicely formatted HTML table
+binary_summary %>%
+  kable("html", caption = "Summary Statistics for Binary Target Variable (b_tgt)") %>%
+  kable_styling(full_width = FALSE, bootstrap_options = c("striped", "hover"))
+```
+
+
+```{r normality tests, echo=TRUE}
+# Load necessary library
+library(nortest)
+
+# Formal Normality Testing (Large Sample Safe)
+for (var in tgt_vars) {
+  cat("\nAnderson-Darling Test for", var, "\n")
+  print(ad.test(bank[[var]]))
+  
+  cat("\nKolmogorov-Smirnov Test for", var, "\n")
+  # Standardize the variable first
+  var_std <- scale(bank[[var]])
+  print(ks.test(var_std, "pnorm"))
+}
+
+```
+
+## Normality Tests for Target Variables
+
+### Anderson-Darling Test Results
+- `int_tgt`:
+  - Test Statistic: A = 4250.3
+  - p-value < 2.2e-16
+- `cnt_tgt`:
+  - Test Statistic: A = 242695
+  - p-value < 2.2e-16
+
+Both tests strongly reject the null hypothesis of normality (p-value << 0.05), indicating that neither `int_tgt` nor `cnt_tgt` follows a normal distribution.
+
+### Kolmogorov-Smirnov Test Results
+- `int_tgt`:
+  - D = 0.11227
+  - p-value < 2.2e-16
+- `cnt_tgt`:
+  - D = 0.47252
+  - p-value < 2.2e-16
+
+Similar to the Anderson-Darling test, the Kolmogorov-Smirnov test results indicate significant deviation from a normal distribution.
+Note: The KS test assumes no ties in the data, and warnings were issued, but given the extremely small p-values, the evidence against normality remains very strong.
+
+## Interpretation and Impact on Modeling Choices
+
+Given the strong evidence of non-normality for both `int_tgt` and `cnt_tgt`:
+
+- Linear regression models may perform poorly unless transformations are applied.
+- Transformations such as log(x + 1) or square root could be considered to reduce skewness if linear models are still desired.
+- Alternatively, non-parametric or tree-based models (e.g., Random Forest, Gradient Boosting) can be applied, as they do not assume normality of the target.
+- Performance metrics such as Mean Absolute Error (MAE) may be preferred over Mean Squared Error (MSE) to reduce the influence of extreme values (outliers).
+
+Additionally:
+- `cnt_tgt`, being a count variable, may be better modeled with Poisson regression or Negative Binomial regression depending on dispersion.
+- If `cnt_tgt` has a high proportion of zeros, Zero-Inflated models could also be appropriate.
+
+# 7. Predictor Analysis
+
+```{r categorical predictor analysis, echo=TRUE}
+# List of categorical variable names excluding b_tgt
+categorical_vars <- c("cat_input1", "cat_input2", "demog_ho", "demog_genf")
+
+# Function to compute frequency tables and create bar charts
+compute_frequency_and_plot <- function(bank, categorical_vars) {
+  # Loop through each variable
+  lapply(categorical_vars, function(var) {
+    # Frequency table for the variable
+    freq_table <- bank %>%
+      dplyr::select(dplyr::all_of(var)) %>%
+      dplyr::filter(!is.na(.data[[var]])) %>%
+      dplyr::group_by(.data[[var]]) %>%
+      dplyr::summarise(Count = n(), .groups = "drop") %>%
+      dplyr::mutate(
+        Level = as.character(.data[[var]]),  # Ensure Level is character
+        Percent = round(100 * Count / sum(Count), 2),
+        Variable = var
+      ) %>%
+      dplyr::select(Variable, Level, Count, Percent)
+
+    # Display frequency table
+    print(freq_table)
+    
+    # Plot bar chart for the variable
+    ggplot(freq_table, aes(x = Level, y = Count, fill = Level)) +
+      geom_bar(stat = "identity", show.legend = FALSE) +
+      theme_minimal() +
+      labs(title = paste("Frequency of", var), x = "Category", y = "Count") +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+}
+
+# Run the function for categorical variables
+compute_frequency_and_plot(bank, categorical_vars)
+```
+
+### Categorical Predictors Analysis
+
+We analyzed the categorical predictors in the dataset to understand the number of categories each predictor has and how these categories are distributed. Below are the findings for each of the predictors:
+
+- **cat_input1 (Account Activity)**
+    - This variable has three categories:
+        - **X**: 831,371 observations (78.43%)
+        - **Y**: 77,847 observations (7.34%)
+        - **Z**: 150,820 observations (14.23%)
+    - The majority of the observations (78.43%) are in the "X" category, indicating that most customers fall under this category. The "Y" category has a significantly smaller proportion (7.34%), while the "Z" category has 14.23% of the observations.
+
+- **cat_input2 (Customer Value Level)**
+    - This variable has five categories:
+        - **A**: 188,398 observations (17.77%)
+        - **B**: 192,382 observations (18.15%)
+        - **C**: 169,550 observations (15.99%)
+        - **D**: 122,282 observations (11.54%)
+        - **E**: 387,426 observations (36.55%)
+    - The distribution of the "cat_input2" variable shows that the largest proportion of customers (36.55%) fall under the "E" category, followed by "B" (18.15%) and "A" (17.77%). Categories "C" and "D" have relatively smaller proportions, with "D" having the lowest proportion at 11.54%.
+
+- **demog_ho (Homeownership)**
+    - This binary variable indicates whether the customer is a homeowner:
+        - **0 (Not Homeowner)**: 476,741 observations (44.97%)
+        - **1 (Homeowner)**: 583,297 observations (55.03%)
+    - The dataset is fairly evenly distributed between homeowners and non-homeowners, with a slightly higher percentage of homeowners (55.03%).
+
+- **demog_genf (Gender - Female)**
+    - This binary variable indicates the gender of the customer:
+        - **0 (Not Female)**: 464,288 observations (43.8%)
+        - **1 (Female)**: 595,750 observations (56.2%)
+    - A majority of the customers (56.2%) are categorized as female, with 43.8% being categorized as not female.
+
+### Numerical Predictors Analysis
+
+## Analysis of Numerical Predictors and Correlation Insights
+
+### 1. Range of Values for Numerical Predictors
+
+The following table provides a summary of the range of values for the key numerical predictors in the dataset from prior code:
+
+| Variable       | Range             | 
+|----------------|-------------------|
+| **int_tgt**    | 0.00 to 500,000   |
+| **cnt_tgt**    | 0.00 to 6.00      |
+| **rfm1**       | 0.00 to 3,713.31  |
+| **rfm2**       | 1.58 to 650.00    |
+| **rfm3**       | 0.00 to 3,713.31  |
+| **rfm4**       | 0.00 to 10,000.00 |
+| **rfm5**       | 0.00 to 18.00     |
+| **rfm6**       | 0.00 to 127.00    |
+| **rfm7**       | 0.00 to 11.00     |
+| **rfm8**       | 0.00 to 46.00     |
+| **rfm9**       | 2.00 to 29.00     |
+| **rfm10**      | 0.00 to 77.00     |
+| **rfm11**      | 0.00 to 22.00     |
+| **rfm12**      | 0.00 to 571.00    |
+| **demog_age**  | -1.00 to 89.00    |
+| **demog_homeval** | 0.00 to 600,067.00 |
+| **demog_inc**  | 0.00 to 200,007.00|
+
+### 2. Observations from Range Analysis
+
+- **Wide Range of Values:** Variables such as **int_tgt**, **rfm1**, **rfm3**, **rfm4**, **demog_homeval**, and **demog_inc** exhibit very large ranges, suggesting a high degree of variability. This might indicate the presence of extreme outliers that could skew analyses and should be checked further.
+  
+- **Narrower Range:** Variables like **cnt_tgt** and **rfm5** have narrower ranges, indicating less variation and potential stability across customers. These could serve as stable predictors in models.
+
+- **Data Quality Issues:** The variable **demog_age** includes a negative value (-1.00), which likely represents missing or invalid data. This should be addressed during data cleaning.
+
+---
+
+### 3. Correlation Insights
+
+The following table highlights some key correlation values between numerical predictors:
+
+| Variable1  | Variable2  | Correlation |
+|------------|------------|-------------|
+| **rfm1**   | **rfm2**   | 0.91        |
+| **rfm1**   | **rfm3**   | 0.96        |
+| **rfm2**   | **rfm3**   | 0.88        |
+| **rfm5**   | **cnt_tgt**| 0.79        |
+| **rfm6**   | **rfm8**   | 0.89        |
+
+#### Correlation Observations:
+- There is an **extremely high correlation** between **rfm1**, **rfm2**, and **rfm3**, with values reaching up to 0.96. This is expected because these variables represent different aspects of sales and promotional responses over time, leading to strong relationships between them.
+- **rfm6** (Count Purchased Lifetime) and **rfm8** (Count Purchased Lifetime Dir Promo Resp) are also highly correlated (0.89), indicating that the total purchases and purchases via direct promotions are closely linked.
+- **rfm5** (Count Purchased Past 3 Years) shows a moderate correlation with the target variable **cnt_tgt** (0.79), making it a valuable predictor for modeling.
+
+---
+
+### 4. Multicollinearity Concerns
+
+Given the **very strong correlations** observed between several predictors (e.g., **rfm1** and **rfm3**), we must be cautious about potential **multicollinearity**. Multicollinearity can distort model interpretations by inflating standard errors and making coefficient estimates unreliable.
+
+#### Recommendations to Address Multicollinearity:
+- **Variable Removal or Combination:** One approach is to remove one variable from each highly correlated pair (e.g., keep **rfm1** or **rfm3**, but not both). This reduces redundancy and helps stabilize the model.
+- **Principal Component Analysis (PCA):** PCA can be used to reduce dimensionality while maintaining the variance across the correlated predictors.
+- **Regularization Techniques:** Using techniques like **Ridge** or **Lasso regression** can help mitigate multicollinearity by shrinking the coefficients of less important variables.
+
+---
+
+### 5. Feature Selection
+
+The strong correlation between some of the predictors and the target variable (**cnt_tgt**) suggests that these features should be prioritized for model training. Notably, **rfm5** (Count Purchased Past 3 Years) shows a correlation of 0.79 with **cnt_tgt**, making it a key predictor.
+
+#### Prioritizing Strong Predictors:
+- **rfm5** and **cnt_tgt** should be retained in the feature set, as they have a strong relationship.
+- Other variables with moderate to high correlations with the target, such as **rfm7** and **rfm12**, could also be considered for inclusion.
+
+---
+
+### 6. Modelling Considerations
+
+When selecting models, it's important to consider how multicollinearity might impact performance, especially for linear models. **Tree-based models** like **Random Forest** or **Gradient Boosting Machines (GBM)** are robust to multicollinearity and can handle correlated features without significant issues.
+
+However, if model interpretability is a priority, addressing multicollinearity should be part of the preprocessing steps to ensure clearer insights into predictor relationships and model coefficients.
+
+## Impact of Predictor Characteristics on Feature Selection and Engineering
+
+### 1. **High Correlation Among RFM Variables**
+
+A major observation in the data is the **extremely high correlation** among several of the RFM variables, particularly **rfm1**, **rfm2**, and **rfm3**, with correlations ranging from 0.88 to 0.96. These variables are related to different aspects of sales and promotional response over time, leading to high multicollinearity.
+
+#### **Impact on Feature Selection:**
+- **Multicollinearity Issues:** High multicollinearity between these predictors can cause instability in linear models, where the model may struggle to differentiate between correlated variables, leading to inflated standard errors and less reliable coefficient estimates.
+- **Feature Engineering Approach:** To mitigate this issue, we can:
+  - **Remove Redundant Features:** Consider removing one of the highly correlated variables from each pair (e.g., choosing between **rfm1** or **rfm3**) to reduce redundancy.
+  - **Dimensionality Reduction:** Use **Principal Component Analysis (PCA)** to transform these correlated variables into uncorrelated principal components, capturing most of the variance while eliminating multicollinearity.
+  - **Regularization Techniques:** If retaining multiple correlated variables is necessary for predictive power, using regularization techniques such as **Ridge Regression** or **Lasso** can help by penalizing large coefficients, thus reducing multicollinearity.
+
+### 2. **Skewed Distributions in Certain Variables**
+
+Several predictors, such as **int_tgt**, **rfm1**, **rfm3**, **rfm4**, and **demog_homeval**, exhibit skewed distributions with heavy tails (e.g., **int_tgt** has a skewness of 13.30). This could indicate the presence of outliers or extreme values that may disproportionately influence model training.
+
+#### **Impact on Feature Engineering:**
+- **Handling Skewed Distributions:** For skewed variables, we can apply **log transformation** or **Box-Cox transformation** to stabilize variance and reduce the impact of outliers. This transformation can make these variables more normally distributed, improving the performance of certain models, particularly linear models and models that assume normality.
+- **Outlier Detection and Treatment:** Identifying and addressing outliers in these variables (e.g., capping or winsorizing extreme values) can also prevent them from dominating the model’s learning process.
+
+### 3. **Numerical Predictors with Large Range of Values**
+
+Some variables like **demog_homeval** and **demog_inc** have large ranges, spanning from zero to very large values. These wide ranges may lead to challenges in models that rely on scale-sensitive techniques (e.g., linear models, SVMs).
+
+#### **Impact on Feature Engineering:**
+- **Feature Scaling:** To address this, **standardization** (zero mean, unit variance) or **min-max scaling** (rescaling the range to [0, 1]) should be applied to these predictors. This will ensure that all variables contribute equally to the model and prevent variables with large ranges from dominating the learning process.
+- **Log Transformation:** For financial variables like **demog_homeval** and **demog_inc**, log transformation can be particularly effective in compressing large values and reducing skewness.
+
+### 4. **Target Variable Characteristics**
+
+The target variable **cnt_tgt** (Count of New Product Purchased) has a wide range but a relatively low mean and a moderate skewness (2.40). This suggests that most customers purchase a small number of products, but there are a few customers with very high counts.
+
+#### **Impact on Feature Engineering:**
+- **Target Transformation:** To deal with the skewness, we may consider applying a **log transformation** to **cnt_tgt**, turning the skewed distribution into a more normal-like distribution. This transformation will help certain models, like linear regression or tree-based models, to better predict the target.
+- **Handling Zero-Inflation:** Given that **cnt_tgt** has many zero values, it might benefit from being treated as a **zero-inflated count variable**. Techniques like **Poisson regression** or **Negative Binomial regression** could be considered for modeling this type of target variable.
+
+### 5. **Demographic Variables**
+
+Demographic variables like **demog_age**, **demog_homeval**, and **demog_inc** have important implications for feature engineering. For example, **demog_age** exhibits a moderate level of skewness and includes negative values (likely indicating missing or erroneous data), which suggests that this variable needs to be cleaned and transformed.
+
+#### **Impact on Feature Selection and Engineering:**
+- **Data Cleaning:** Any invalid or missing values in **demog_age** (e.g., the negative value) should be addressed through imputation or removal, depending on the context and the percentage of missing data.
+- **Categorization:** Age-related variables like **demog_age** may also be grouped into **age bands** (e.g., 18-25, 26-35) to capture non-linear relationships between age and target behavior.
+- **Feature Interaction:** Interaction terms between demographic variables and other predictors (e.g., **demog_inc** with **rfm5**) could uncover valuable insights, especially in tree-based models, where interactions are automatically handled.
+
+### 6. **Targeted Feature Selection**
+
+Given the strong correlation between some of the RFM variables and the target variable **cnt_tgt** (e.g., **rfm5** and **cnt_tgt** have a correlation of 0.79), it is essential to focus on features that exhibit strong predictive power.
+
+#### **Impact on Feature Selection:**
+- **Prioritize Strong Correlates:** Variables like **rfm5** and other features that show strong relationships with the target (e.g., **rfm12**, **rfm7**) should be given priority during feature selection.
+- **Redundant Feature Removal:** Features that are highly correlated with each other and with the target should be reviewed and potentially removed to avoid overfitting.
+
