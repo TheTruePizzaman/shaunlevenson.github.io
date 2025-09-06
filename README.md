@@ -59,5 +59,5 @@ This [project](projects/Environmental/) compares California’s main climate pol
 This [project](projects/Macro-2/) evaluates whether the current U.S. Federal Funds Target Rate is appropriately set in 2025, drawing on economic data, theory, and expert opinion to argue for maintaining a steady rate amid inflation and growth uncertainties.
 
 **Predictive Modelling for Direct Marketing Optimization**
-This [project](shaunlevenson.github.io/projects/Analytics) applied predictive modeling to optimize direct marketing for a financial institution, using advanced AutoML techniques on a dataset of over one million customers to forecast product adoption, new sales, and purchase counts, guiding targeted marketing strategies.
+This [project](shaunlevenson.github.io/projects/Analytics/) applied predictive modeling to optimize direct marketing for a financial institution, using advanced AutoML techniques on a dataset of over one million customers to forecast product adoption, new sales, and purchase counts, guiding targeted marketing strategies.
 
